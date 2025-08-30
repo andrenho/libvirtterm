@@ -33,11 +33,14 @@ void vt_resize(VT* vt, size_t rows, size_t columns)
     for (size_t i = 0; i < rows * columns; ++i)
         vt->matrix[i] = (VTChar) { .ch = ' ' };
 
-    vt->matrix[0] = (VTChar) { .ch = 'H', .attrib = (VTAttrib) { .bg_color = VT_BRIGHT_RED, .fg_color = VT_BRIGHT_GREEN } };
+    vt->matrix[0] = (VTChar) { .ch = 'H', .attrib = DEFAULT_ATTR };
     vt->matrix[1] = (VTChar) { .ch = 'e', .attrib = DEFAULT_ATTR };
     vt->matrix[2] = (VTChar) { .ch = 'l', .attrib = DEFAULT_ATTR };
     vt->matrix[3] = (VTChar) { .ch = 'l', .attrib = DEFAULT_ATTR };
     vt->matrix[4] = (VTChar) { .ch = 'o', .attrib = DEFAULT_ATTR };
+
+    for (size_t i = 0; i < 4; ++i)
+        vt->matrix[i].attrib.underline = true;
 
     // TODO - keep chars
 }

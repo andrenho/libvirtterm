@@ -23,11 +23,17 @@ typedef enum VTColor {
 } VTColor;
 
 typedef struct __attribute__((packed)) VTAttrib {
+    bool bold        : 1;
+    bool dim         : 1;
+    bool underline   : 1;
+    bool blink       : 1;   // automatically managed
+    bool reverse     : 1;   //       "          "
+    bool invisible   : 1;   //       "          "
     VTColor bg_color : 4;
     VTColor fg_color : 4;
 } VTAttrib;
 
-#define DEFAULT_ATTR ((VTAttrib) { .bg_color = VT_BLACK, .fg_color = VT_WHITE })
+#define DEFAULT_ATTR ((VTAttrib) { .bold = false, .dim = false, .underline = false, .blink = false, .reverse = false, .invisible = false, .bg_color = VT_BLACK, .fg_color = VT_WHITE })
 
 typedef struct __attribute__((packed)) VTChar {
     char     ch;

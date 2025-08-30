@@ -86,8 +86,20 @@ static void draw_char(size_t row, size_t column)
     // draw character
     if (chr.ch != 0 && chr.ch != ' ') {
         SDL_Color fg = terminal_colors[chr.attrib.fg_color];
+        if (chr.attrib.dim) { fg.r *= 0.6; fg.g *= 0.6; fg.b *= 0.6; }
         SDL_SetTextureColorMod(font, fg.r, fg.g, fg.b);
         SDL_RenderTexture(ren, font, &origin, &dest);
+
+        if (chr.attrib.bold) {
+            dest.x += 1;
+            SDL_RenderTexture(ren, font, &origin, &dest);
+        }
+
+        if (chr.attrib.underline) {
+            SDL_FRect r = { dest.x, dest.y + ((FONT_H - 2) * ZOOM), dest.w, ZOOM };
+            SDL_SetRenderDrawColor(ren, fg.r, fg.g, fg.b, SDL_ALPHA_OPAQUE);
+            SDL_RenderFillRect(ren, &r);
+        }
     }
 }
 
