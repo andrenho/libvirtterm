@@ -145,14 +145,15 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
             uint16_t key = translate_key(keycode);
             char buf[16];
             int n = vt_translate_key(vt, key, event->key.mod & SDL_KMOD_SHIFT, event->key.mod & SDL_KMOD_CTRL, buf, sizeof buf);
+            if (buf[0] != 0) {
 #ifdef DEBUG
-            for (size_t i = 0; i < n; ++i)
-                printf("< %c    %d 0x%02X\n", buf[i], buf[i], buf[i]);
-            printf("------\n");
+                for (int i = 0; i < n; ++i)
+                    printf("< %c    %d 0x%02X\n", buf[i], buf[i], buf[i]);
+                printf("------\n");
 #endif
-            if (buf[0] != 0)
                 if (write(master_pty, buf, n) == 0)
                     exit(0);
+            }
             break;
         }
         case SDL_EVENT_QUIT:
@@ -205,7 +206,7 @@ SDL_AppResult SDL_AppIterate(void *appstate)
         exit(0);
     } else if (n > 0) {
 #ifdef DEBUG
-        for (size_t i = 0; i < n; ++i)
+        for (int i = 0; i < n; ++i)
             printf("> %c    %d 0x%02X\n", buf[i], buf[i], buf[i]);
         printf("------\n");
 #endif

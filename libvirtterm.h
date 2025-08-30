@@ -82,6 +82,7 @@ typedef struct __attribute__((packed)) VTAttrib {
     bool blink       : 1;   // automatically managed
     bool reverse     : 1;   //       "          "
     bool invisible   : 1;   //       "          "
+    int  padding     : 2;
     VTColor bg_color : 4;
     VTColor fg_color : 4;
 } VTAttrib;
@@ -132,6 +133,8 @@ typedef struct VT {
     VTAttrib   current_attrib;
     VTCallback push_event;
     void*      data;
+    char       current_buffer[32];
+    bool       buffer_mode;
     VTChar*    matrix;
 } VT;
 

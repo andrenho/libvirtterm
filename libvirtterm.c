@@ -17,7 +17,7 @@ static const HidString vt_strings[] = {
     { VT_HOME,        "\e[H" },
     { VT_END,         "\e[F" },
     { VT_INSERT,      "\e[2~" },
-    { VT_BACKSPACE,   "\x7f" },
+    { VT_BACKSPACE,   "\b" },
     { VT_TAB,         "\t" },
     { VT_PAGE_UP,     "\e[5~" },
     { VT_PAGE_DOWN,   "\e[6~" },
@@ -124,6 +124,8 @@ VT* vt_new(size_t rows, size_t columns, VTCallback callback, VTConfig const* con
     vt->current_attrib = DEFAULT_ATTR;
     vt->push_event = callback;
     vt->data = data;
+    memset(vt->current_buffer, 0, sizeof vt->current_buffer);
+    vt->buffer_mode = false;
     vt_resize(vt, rows, columns);
     return vt;
 }
@@ -152,8 +154,9 @@ void vt_resize(VT* vt, size_t rows, size_t columns)
 static void scroll_up(VT* vt)
 {
     memmove(vt->matrix, &vt->matrix[vt->columns], vt->columns * (vt->rows - 1) * sizeof(VTChar));
-    for (size_t i = 0; i < vt->columns; ++i)
+    for (size_t i = 0; i < vt->columns; ++i) {
         vt->matrix[vt->columns * (vt->rows - 1) + i] = (VTChar) { .ch = ' ', .attrib = vt->current_attrib };
+    }
 
     if (vt->config.on_scroll_up == VT_NOTIFY) {
         vt->push_event(vt, &(VTEvent) { .type = VT_EVENT_SCROLL_UP, .scroll_up = { .count = 1 } });
@@ -161,13 +164,16 @@ static void scroll_up(VT* vt)
         for (size_t row = 0; row < vt->rows; ++row)
             vt->push_event(vt, &(VTEvent) { .type = VT_EVENT_ROW_UPDATE, .row = { .row = row } });
     } else if (vt->config.update_events == VT_CELL_UPDATE) {
-        for (size_t row = 0; row < vt->rows; ++row)
-            for (size_t column = 0; column < vt->columns; ++column)
+        // TODO - only update the cells that actually changed
+        for (size_t row = 0; row < vt->rows; ++row) {
+            for (size_t column = 0; column < vt->columns; ++column) {
                 vt->push_event(vt, &(VTEvent) { .type = VT_EVENT_CELL_UPDATE, .cell = { .column = column, .row = row } });
+            }
+        }
     }
 }
 
-static void add_char(VT* vt, char c, size_t* row, size_t* column)
+static bool add_char(VT* vt, char c, size_t* row, size_t* column)
 {
     *row = vt->cursor.row;
     *column = vt->cursor.column;
@@ -176,7 +182,7 @@ static void add_char(VT* vt, char c, size_t* row, size_t* column)
         ++vt->cursor.row;
     } else if (c == 13) {
         vt->cursor.column = 0;
-    } else if (c == 8) {
+    } else if (c == '\b') {
         if (vt->cursor.column > 0)
             --vt->cursor.column;
     } else {
@@ -197,6 +203,8 @@ static void add_char(VT* vt, char c, size_t* row, size_t* column)
         --vt->cursor.row;
         vt->cursor.column = 0;
     }
+
+    return true;
 }
 
 void vt_write(VT* vt, const char* str, size_t str_sz)
@@ -206,16 +214,17 @@ void vt_write(VT* vt, const char* str, size_t str_sz)
 
     for (size_t i = 0; i < str_sz; ++i) {
         size_t row, column;
-        add_char(vt, str[i], &row, &column);
-        rows_updates[row] = true;
-        if (vt->config.update_events == VT_CELL_UPDATE) {
-            vt->push_event(vt, &(VTEvent) { .type = VT_EVENT_CELL_UPDATE, .cell = { row, column } });
+        if (add_char(vt, str[i], &row, &column)) {
+            rows_updates[row] = true;
+            if (vt->config.update_events == VT_CELL_UPDATE) {
+                vt->push_event(vt, &(VTEvent) { .type = VT_EVENT_CELL_UPDATE, .cell = { row, column } });
+            }
         }
     }
 
     if (vt->config.update_events == VT_ROW_UPDATE) {
         for (size_t i = 0; i < vt->rows; ++i)
-            vt->push_event(vt, &(VTEvent) { .type = VT_EVENT_CELL_UPDATE, .row = i });
+            vt->push_event(vt, &(VTEvent) { .type = VT_EVENT_CELL_UPDATE, .row = { .row = i } });
     }
 }
 
@@ -236,6 +245,8 @@ void vt_configure(VT* vt, VTConfig* config)
 
 int vt_translate_key(VT* vt, uint16_t key, bool shift, bool ctrl, char* output, size_t max_sz)
 {
+    (void) vt;
+
     memset(output, 0, max_sz);
 
     if (key == '\r') {
