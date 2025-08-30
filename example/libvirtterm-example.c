@@ -1,4 +1,12 @@
+#define _XOPEN_SOURCE 600
+#include <pty.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <utmp.h>
+
 #define SDL_MAIN_USE_CALLBACKS 1  /* use the callbacks instead of main() */
+#include <stdio.h>
+#include <stdlib.h>
 #include <SDL3/SDL_assert.h>
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
@@ -11,6 +19,7 @@ static SDL_Window   *window = NULL;
 static SDL_Renderer *ren = NULL;
 static SDL_Texture  *font = NULL;
 static VT           *vt = NULL;
+static int          master_pty = -1;
 
 #define FONT_W 8
 #define FONT_H 15
@@ -30,9 +39,15 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     (void) argc;
     (void) argv;
 
+    //
+    // initialize SDL
+    //
     SDL_assert(SDL_Init(SDL_INIT_VIDEO));
     SDL_assert(SDL_CreateWindowAndRenderer("libvirtterm example", 1024, 768, SDL_WINDOW_RESIZABLE, &window, &ren));
 
+    //
+    // initialize font
+    //
     char* bmp_path;
     SDL_asprintf(&bmp_path, "%stoshiba.bmp", SDL_GetBasePath());
     SDL_Surface* font_sf = SDL_LoadBMP(bmp_path);
@@ -51,12 +66,33 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 
     SDL_DestroySurface(font_sf);
 
+    //
+    // initialize libvirtterm
+    //
     int w, h;
     SDL_GetWindowSize(window, &w, &h);
     VTConfig config = VT_DEFAULT_CONFIG;
     vt = vt_new((h - BORDER*2) / FONT_H / ZOOM, (w - BORDER*2) / FONT_W / ZOOM, vt_callback, &config, NULL);
 
-    vt_write(vt, "Hello", 5);
+    //
+    // open shell
+    //
+    char pty_name[1024];
+    struct winsize ws = { vt->rows, vt->columns, w - (BORDER * 2), h - (BORDER * 2) };
+    pid_t pid = forkpty(&master_pty, pty_name, NULL, &ws);
+    if (pid == 0) {
+        char *shell_path = getenv("SHELL");
+        if (shell_path)
+            execl(shell_path, shell_path, NULL);
+        else
+            execl("/bin/sh", "sh", NULL);
+        perror("execl");
+        exit(1);
+    }
+    int flags = fcntl(master_pty, F_GETFL, 0);
+    fcntl(master_pty, F_SETFL, flags | O_NONBLOCK);
+
+    printf("Shell session started at %s.\n", pty_name);
 
     return SDL_APP_CONTINUE;
 }
@@ -110,6 +146,13 @@ static void draw_char(size_t row, size_t column)
 SDL_AppResult SDL_AppIterate(void *appstate)
 {
     (void) appstate;
+
+    char buf[256];
+    int n = read(master_pty, buf, sizeof(buf));
+    if (n == 0)
+        exit(0);
+    else if (n > 0)
+        vt_write(vt, buf, n);
 
     SDL_SetRenderDrawColor(ren, 0, 0, 0, SDL_ALPHA_OPAQUE);
     SDL_RenderClear(ren);
