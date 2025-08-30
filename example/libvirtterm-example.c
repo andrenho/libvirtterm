@@ -81,6 +81,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     struct winsize ws = { vt->rows, vt->columns, w - (BORDER * 2), h - (BORDER * 2) };
     pid_t pid = forkpty(&master_pty, pty_name, NULL, &ws);
     if (pid == 0) {
+        setenv("TERM", "xterm", 1);
         char *shell_path = getenv("SHELL");
         if (shell_path)
             execl(shell_path, shell_path, NULL);
