@@ -2,6 +2,7 @@
 #define LIBVIRTTERM_H_
 
 #include <stdbool.h>
+#include <stdint.h>
 #include <stddef.h>
 
 typedef enum VTColor {
@@ -106,6 +107,7 @@ VTChar vt_char(VT* vt, size_t row, size_t column);
 
 void vt_resize(VT* vt, size_t rows, size_t columns);
 void vt_write(VT* vt, const char* str, size_t str_sz);
+int  vt_translate_key(VT* vt, uint16_t key, char* output, size_t max_sz);
 
 void vt_configure(VT* vt, VTConfig* config);
 

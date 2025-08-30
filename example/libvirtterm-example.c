@@ -104,6 +104,13 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
     (void) appstate;
 
     switch (event->type) {
+        case SDL_EVENT_KEY_DOWN: {
+            uint16_t key = event->key.key;
+            char buf[16];
+            int n = vt_translate_key(vt, key, buf, sizeof buf);
+            write(master_pty, buf, n);
+            break;
+        }
         case SDL_EVENT_QUIT:
             return SDL_APP_SUCCESS;
     }

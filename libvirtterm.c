@@ -92,3 +92,10 @@ void vt_configure(VT* vt, VTConfig* config)
 {
     vt->config = *config;
 }
+
+int vt_translate_key(VT* vt, uint16_t key, char* output, size_t max_sz)
+{
+    output[0] = (char) key;
+    output[1] = 0;
+    return 1;
+}
