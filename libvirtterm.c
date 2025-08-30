@@ -5,11 +5,11 @@
 #include <string.h>
 
 typedef struct {
-    uint8_t     hid;
+    VTKeys      key;
     const char* str;
 } HidString;
 
-static const HidString hid_strings[] = {
+static const HidString vt_strings[] = {
     { VT_ARROW_UP,    "\e[A "},
     { VT_ARROW_DOWN,  "\e[B" },
     { VT_ARROW_RIGHT, "\e[C" },
@@ -35,7 +35,7 @@ static const HidString hid_strings[] = {
     { VT_F12,         "\e[24~" },
 };
 
-static const HidString hid_strings_ctrl[] = {
+static const HidString vt_strings_ctrl[] = {
     { VT_ARROW_UP,    "\e[1;5A" },
     { VT_ARROW_DOWN,  "\e[1;5B" },
     { VT_ARROW_RIGHT, "\e[1;5C" },
@@ -61,7 +61,7 @@ static const HidString hid_strings_ctrl[] = {
     { VT_F12,         "\e[24;5~" },
 };
 
-static const HidString hid_strings_shift[] = {
+static const HidString vt_strings_shift[] = {
     { VT_ARROW_UP,    "\e[1;2A" },
     { VT_ARROW_DOWN,  "\e[1;2B" },
     { VT_ARROW_RIGHT, "\e[1;2C" },
@@ -71,8 +71,8 @@ static const HidString hid_strings_shift[] = {
     { VT_INSERT,      "\e[2;5~" },  // TODO
     { VT_BACKSPACE,   "\x7f" },
     { VT_TAB,         "\e[Z" },
-{ VT_PAGE_UP,     "\e[5~" },
-{ VT_PAGE_DOWN,   "\e[6~" },
+    { VT_PAGE_UP,     "\e[5~" },
+    { VT_PAGE_DOWN,   "\e[6~" },
     { VT_F1,          "\e[1;2P" },
     { VT_F2,          "\e[1;2Q" },
     { VT_F3,          "\e[1;2R" },
@@ -88,7 +88,7 @@ static const HidString hid_strings_shift[] = {
 };
 
 
-static const HidString hid_strings_ctrl_shift[] = {
+static const HidString vt_strings_ctrl_shift[] = {
     { VT_ARROW_UP,    "\e[1;6A" },
     { VT_ARROW_DOWN,  "\e[1;6B" },
     { VT_ARROW_RIGHT, "\e[1;6C" },
@@ -149,23 +149,54 @@ void vt_resize(VT* vt, size_t rows, size_t columns)
     // TODO - keep chars when resizing
 }
 
+static void scroll_up(VT* vt)
+{
+    memmove(vt->matrix, &vt->matrix[vt->columns], vt->columns * (vt->rows - 1) * sizeof(VTChar));
+    for (size_t i = 0; i < vt->columns; ++i)
+        vt->matrix[vt->columns * (vt->rows - 1) + i] = (VTChar) { .ch = ' ', .attrib = vt->current_attrib };
+
+    if (vt->config.on_scroll_up == VT_NOTIFY) {
+        vt->push_event(vt, &(VTEvent) { .type = VT_EVENT_SCROLL_UP, .scroll_up = { .count = 1 } });
+    } else if (vt->config.update_events == VT_ROW_UPDATE) {
+        for (size_t row = 0; row < vt->rows; ++row)
+            vt->push_event(vt, &(VTEvent) { .type = VT_EVENT_ROW_UPDATE, .row = { .row = row } });
+    } else if (vt->config.update_events == VT_CELL_UPDATE) {
+        for (size_t row = 0; row < vt->rows; ++row)
+            for (size_t column = 0; column < vt->columns; ++column)
+                vt->push_event(vt, &(VTEvent) { .type = VT_EVENT_CELL_UPDATE, .cell = { .column = column, .row = row } });
+    }
+}
+
 static void add_char(VT* vt, char c, size_t* row, size_t* column)
 {
     *row = vt->cursor.row;
     *column = vt->cursor.column;
 
-    vt->matrix[vt->cursor.row * vt->rows + vt->cursor.column] = (VTChar) {
-        .ch = c,
-        .attrib = vt->current_attrib,
-    };
+    if (c == 10) {
+        ++vt->cursor.row;
+    } else if (c == 13) {
+        vt->cursor.column = 0;
+    } else if (c == 8) {
+        if (vt->cursor.column > 0)
+            --vt->cursor.column;
+    } else {
+        vt->matrix[vt->cursor.row * vt->columns + vt->cursor.column] = (VTChar) {
+            .ch = c,
+            .attrib = vt->current_attrib,
+        };
+        ++vt->cursor.column;
+    }
 
-    ++vt->cursor.column;
     if (vt->cursor.column == vt->columns) {
         vt->cursor.column = 0;
         ++vt->cursor.row;
     }
 
-    // TODO - scroll up
+    if (vt->cursor.row == vt->rows) {
+        scroll_up(vt);
+        --vt->cursor.row;
+        vt->cursor.column = 0;
+    }
 }
 
 void vt_write(VT* vt, const char* str, size_t str_sz)
@@ -205,7 +236,34 @@ void vt_configure(VT* vt, VTConfig* config)
 
 int vt_translate_key(VT* vt, uint16_t key, bool shift, bool ctrl, char* output, size_t max_sz)
 {
-    output[0] = (char) key;
-    output[1] = 0;
+    memset(output, 0, max_sz);
+
+    if (key == '\r') {
+        output[0] = '\n';
+        return 1;
+    }
+
+#define CHECK_KBD(SHIFT, CTRL, ARRAY) \
+    if (SHIFT && CTRL) \
+        for (size_t i = 0; i < (sizeof ARRAY) / (sizeof ARRAY[0]); ++i) \
+            if (key == ARRAY[i].key) \
+                return snprintf(output, max_sz, "%s", ARRAY[i].str);
+
+    CHECK_KBD(!shift, !ctrl, vt_strings)
+    CHECK_KBD(shift,  !ctrl, vt_strings_shift)
+    CHECK_KBD(!shift, ctrl,  vt_strings_ctrl)
+    CHECK_KBD(shift,  ctrl,  vt_strings_ctrl_shift)
+
+    if (key != 0) {
+        if (ctrl) {
+            if (key >= 'A' && key <= '_')
+                output[0] = key - 'A' + 1;
+            else if (key >= 'a' && key <= 'z')
+                output[0] = key - 'a' + 1;
+        } else {
+            output[0] = (char) key;
+        }
+    }
+
     return 1;
 }

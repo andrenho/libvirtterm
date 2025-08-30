@@ -31,7 +31,7 @@ typedef enum VTKeys {
     VT_ARROW_RIGHT,
     VT_BACKSPACE,
     VT_TAB,
-};
+} VTKeys;
 
 typedef enum VTColor {
     VT_BLACK = 0,
@@ -53,14 +53,16 @@ typedef enum VTColor {
 } VTColor;
 
 typedef enum { VT_NO_UPDATES, VT_CELL_UPDATE, VT_ROW_UPDATE } VTUpdateEvents;
+typedef enum { VT_NOTIFY, VT_REFRESH } VTScrollUpAction;
 
 typedef struct VTConfig {
-    VTColor        default_fg_color;       // some default colors
-    VTColor        default_bg_color;
-    VTColor        cursor_color;
-    VTColor        cursor_char_color;
-    bool           automatic_cursor;       // if true, control cursor from within libvirtterm, else sends cursor updates as events
-    VTUpdateEvents update_events;          // when a cell changes, send updates per cell, per line, or none at all
+    VTColor          default_fg_color;       // some default colors
+    VTColor          default_bg_color;
+    VTColor          cursor_color;
+    VTColor          cursor_char_color;
+    bool             automatic_cursor;       // if true, control cursor from within libvirtterm, else sends cursor updates as events
+    VTUpdateEvents   update_events;          // when a cell changes, send updates per cell, per line, or none at all
+    VTScrollUpAction on_scroll_up;
 } VTConfig;
 
 #define VT_DEFAULT_CONFIG (VTConfig) {      \
@@ -70,6 +72,7 @@ typedef struct VTConfig {
     .cursor_char_color = VT_BLACK,          \
     .automatic_cursor = true,               \
     .update_events = VT_NO_UPDATES,         \
+    .on_scroll_up = VT_REFRESH,             \
 }
 
 typedef struct __attribute__((packed)) VTAttrib {
@@ -93,6 +96,7 @@ typedef struct __attribute__((packed)) VTChar {
 typedef enum VTEventType {
     VT_EVENT_CELL_UPDATE,
     VT_EVENT_ROW_UPDATE,
+    VT_EVENT_SCROLL_UP,
 } VTEventType;
 
 typedef struct VTEvent {
@@ -105,6 +109,9 @@ typedef struct VTEvent {
         struct {
             size_t row;
         } row;
+        struct {
+            size_t count;
+        } scroll_up;
     };
 } VTEvent;
 

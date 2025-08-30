@@ -14,6 +14,8 @@
 #include "../libvirtterm.h"
 #include "colors.h"
 
+#define DEBUG 1
+
 /* We will use this ren to draw into this window every frame. */
 static SDL_Window   *window = NULL;
 static SDL_Renderer *ren = NULL;
@@ -23,7 +25,7 @@ static int          master_pty = -1;
 
 #define FONT_W 8
 #define FONT_H 15
-#define ZOOM 2.f
+#define ZOOM 1.f
 #define BORDER 16
 
 void vt_callback(VT* vt, VTEvent* e)
@@ -44,6 +46,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     //
     SDL_assert(SDL_Init(SDL_INIT_VIDEO));
     SDL_assert(SDL_CreateWindowAndRenderer("libvirtterm example", 1024, 768, SDL_WINDOW_RESIZABLE, &window, &ren));
+    SDL_StartTextInput(window);
 
     //
     // initialize font
@@ -125,6 +128,7 @@ static uint16_t translate_key(SDL_Keycode key)
         case SDLK_UP:                     return VT_ARROW_UP;
         case SDLK_BACKSPACE:              return VT_BACKSPACE;
         case SDLK_TAB:                    return VT_TAB;
+        case SDLK_KP_ENTER:               return '\r';
         default:
             return key < 0xff ? key : 0;
     }
@@ -137,10 +141,17 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
 
     switch (event->type) {
         case SDL_EVENT_KEY_DOWN: {
-            uint16_t key = translate_key(event->key.key);
+            SDL_Keycode keycode = SDL_GetKeyFromScancode(event->key.scancode, event->key.mod, false);
+            uint16_t key = translate_key(keycode);
             char buf[16];
             int n = vt_translate_key(vt, key, event->key.mod & SDL_KMOD_SHIFT, event->key.mod & SDL_KMOD_CTRL, buf, sizeof buf);
-            write(master_pty, buf, n);
+#ifdef DEBUG
+            for (size_t i = 0; i < n; ++i)
+                printf("< %c    %d 0x%02X\n", buf[i], buf[i], buf[i]);
+            printf("------\n");
+#endif
+            if (write(master_pty, buf, n) == 0)
+                exit(0);
             break;
         }
         case SDL_EVENT_QUIT:
@@ -189,10 +200,16 @@ SDL_AppResult SDL_AppIterate(void *appstate)
 
     char buf[256];
     int n = read(master_pty, buf, sizeof(buf));
-    if (n == 0)
+    if (n == 0) {
         exit(0);
-    else if (n > 0)
+    } else if (n > 0) {
+#ifdef DEBUG
+        for (size_t i = 0; i < n; ++i)
+            printf("> %c    %d 0x%02X\n", buf[i], buf[i], buf[i]);
+        printf("------\n");
+#endif
         vt_write(vt, buf, n);
+    }
 
     SDL_SetRenderDrawColor(ren, 0, 0, 0, SDL_ALPHA_OPAQUE);
     SDL_RenderClear(ren);
