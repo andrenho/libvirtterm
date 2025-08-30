@@ -80,7 +80,7 @@ void vt_write(VT* vt, const char* str, size_t str_sz)
 
 VTChar vt_char(VT* vt, size_t row, size_t column)
 {
-    VTChar ch = vt->matrix[row * vt->rows + column];
+    VTChar ch = vt->matrix[row * vt->columns + column];
     if (vt->cursor.visible && vt->cursor.row == row && vt->cursor.column == column && vt->config.automatic_cursor) {
         ch.attrib.bg_color = vt->config.cursor_color;
         ch.attrib.fg_color = vt->config.cursor_char_color;
