@@ -16,6 +16,7 @@ VT* vt_new(size_t rows, size_t columns, VTCallback callback, void* data)
         .cursor_color = VT_BRIGHT_GREEN,
         .cursor_char_color = VT_BLACK,
     };
+    vt->current_attrib = DEFAULT_ATTR;
     vt->callback = callback;
     vt->data = data;
     vt_resize(vt, rows, columns);
@@ -43,11 +44,27 @@ void vt_resize(VT* vt, size_t rows, size_t columns)
     // TODO - keep chars when resizing
 }
 
+static void add_char(VT* vt, char c)
+{
+    vt->matrix[vt->cursor.row * vt->rows + vt->cursor.column] = (VTChar) {
+        .ch = c,
+        .attrib = vt->current_attrib,
+    };
+
+    ++vt->cursor.column;
+    if (vt->cursor.column == vt->columns) {
+        vt->cursor.column = 0;
+        ++vt->cursor.row;
+    }
+
+    // TODO - scroll up
+}
+
 void vt_write(VT* vt, const char* str, size_t str_sz)
 {
-    (void) vt;
-    (void) str;
-    (void) str_sz;
+    for (size_t i = 0; i < str_sz; ++i) {
+        add_char(vt, str[i]);
+    }
 }
 
 VTChar vt_char(VT* vt, size_t row, size_t column)

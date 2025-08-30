@@ -66,6 +66,7 @@ typedef struct VT {
     size_t     columns;
     VTCursor   cursor;
     VTConfig   config;
+    VTAttrib   current_attrib;
     VTCallback callback;
     void*      data;
     VTChar*    matrix;

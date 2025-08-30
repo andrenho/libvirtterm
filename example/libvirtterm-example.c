@@ -55,6 +55,8 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     SDL_GetWindowSize(window, &w, &h);
     vt = vt_new((h - BORDER*2) / FONT_H / ZOOM, (w - BORDER*2) / FONT_W / ZOOM, vt_callback, NULL);
 
+    vt_write(vt, "Hello", 5);
+
     return SDL_APP_CONTINUE;
 }
 
