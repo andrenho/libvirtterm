@@ -23,6 +23,13 @@ typedef enum VTColor {
     VT_BRIGHT_WHITE,
 } VTColor;
 
+typedef struct VTConfig {
+    VTColor default_fg_color;
+    VTColor default_bg_color;
+    VTColor cursor_color;
+    VTColor cursor_char_color;
+} VTConfig;
+
 typedef struct __attribute__((packed)) VTAttrib {
     bool bold        : 1;
     bool dim         : 1;
@@ -34,7 +41,7 @@ typedef struct __attribute__((packed)) VTAttrib {
     VTColor fg_color : 4;
 } VTAttrib;
 
-#define DEFAULT_ATTR ((VTAttrib) { .bold = false, .dim = false, .underline = false, .blink = false, .reverse = false, .invisible = false, .bg_color = VT_BLACK, .fg_color = VT_WHITE })
+#define DEFAULT_ATTR ((VTAttrib) { .bold = false, .dim = false, .underline = false, .blink = false, .reverse = false, .invisible = false, .bg_color = vt->config.default_bg_color, .fg_color = vt->config.default_fg_color })
 
 typedef struct __attribute__((packed)) VTChar {
     char     ch;
@@ -58,6 +65,7 @@ typedef struct VT {
     size_t     rows;
     size_t     columns;
     VTCursor   cursor;
+    VTConfig   config;
     VTCallback callback;
     void*      data;
     VTChar*    matrix;
@@ -70,5 +78,7 @@ VTChar vt_char(VT* vt, size_t row, size_t column);
 
 void vt_resize(VT* vt, size_t rows, size_t columns);
 void vt_write(VT* vt, const char* str, size_t str_sz);
+
+void vt_configure(VT* vt, VTConfig* config);
 
 #endif
