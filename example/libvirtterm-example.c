@@ -150,8 +150,9 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
                 printf("< %c    %d 0x%02X\n", buf[i], buf[i], buf[i]);
             printf("------\n");
 #endif
-            if (write(master_pty, buf, n) == 0)
-                exit(0);
+            if (buf[0] != 0)
+                if (write(master_pty, buf, n) == 0)
+                    exit(0);
             break;
         }
         case SDL_EVENT_QUIT:
