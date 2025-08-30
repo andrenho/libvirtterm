@@ -5,6 +5,34 @@
 #include <stdint.h>
 #include <stddef.h>
 
+typedef enum VTKeys {
+    VT_ESC = 0x100,
+    VT_F1,
+    VT_F2,
+    VT_F3,
+    VT_F4,
+    VT_F5,
+    VT_F6,
+    VT_F7,
+    VT_F8,
+    VT_F9,
+    VT_F10,
+    VT_F11,
+    VT_F12,
+    VT_INSERT,
+    VT_DELETE,
+    VT_HOME,
+    VT_END,
+    VT_PAGE_UP,
+    VT_PAGE_DOWN,
+    VT_ARROW_UP,
+    VT_ARROW_DOWN,
+    VT_ARROW_LEFT,
+    VT_ARROW_RIGHT,
+    VT_BACKSPACE,
+    VT_TAB,
+};
+
 typedef enum VTColor {
     VT_BLACK = 0,
     VT_RED,
@@ -107,7 +135,7 @@ VTChar vt_char(VT* vt, size_t row, size_t column);
 
 void vt_resize(VT* vt, size_t rows, size_t columns);
 void vt_write(VT* vt, const char* str, size_t str_sz);
-int  vt_translate_key(VT* vt, uint16_t key, char* output, size_t max_sz);
+int  vt_translate_key(VT* vt, uint16_t key, bool shift, bool ctrl, char* output, size_t max_sz);
 
 void vt_configure(VT* vt, VTConfig* config);
 

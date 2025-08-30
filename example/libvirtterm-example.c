@@ -99,15 +99,47 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 }
 
 
+static uint16_t translate_key(SDL_Keycode key)
+{
+    switch (key) {
+        case SDLK_F1:                     return VT_F1;
+        case SDLK_F2:                     return VT_F2;
+        case SDLK_F3:                     return VT_F3;
+        case SDLK_F4:                     return VT_F4;
+        case SDLK_F5:                     return VT_F5;
+        case SDLK_F6:                     return VT_F6;
+        case SDLK_F7:                     return VT_F7;
+        case SDLK_F8:                     return VT_F8;
+        case SDLK_F9:                     return VT_F9;
+        case SDLK_F10:                    return VT_F10;
+        case SDLK_F11:                    return VT_F11;
+        case SDLK_F12:                    return VT_F12;
+        case SDLK_INSERT:                 return VT_INSERT;
+        case SDLK_HOME:                   return VT_HOME;
+        case SDLK_PAGEUP:                 return VT_PAGE_UP;
+        case SDLK_END:                    return VT_END;
+        case SDLK_PAGEDOWN:               return VT_PAGE_DOWN;
+        case SDLK_RIGHT:                  return VT_ARROW_RIGHT;
+        case SDLK_LEFT:                   return VT_ARROW_LEFT;
+        case SDLK_DOWN:                   return VT_ARROW_DOWN;
+        case SDLK_UP:                     return VT_ARROW_UP;
+        case SDLK_BACKSPACE:              return VT_BACKSPACE;
+        case SDLK_TAB:                    return VT_TAB;
+        default:
+            return key < 0xff ? key : 0;
+    }
+}
+
+
 SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
 {
     (void) appstate;
 
     switch (event->type) {
         case SDL_EVENT_KEY_DOWN: {
-            uint16_t key = event->key.key;
+            uint16_t key = translate_key(event->key.key);
             char buf[16];
-            int n = vt_translate_key(vt, key, buf, sizeof buf);
+            int n = vt_translate_key(vt, key, event->key.mod & SDL_KMOD_SHIFT, event->key.mod & SDL_KMOD_CTRL, buf, sizeof buf);
             write(master_pty, buf, n);
             break;
         }
