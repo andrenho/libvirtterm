@@ -1,0 +1,5 @@
+-[ ] Create sample application
+  - [ ] Load and manage font
+  - [ ] Terminal framebuffer
+  - [ ] Draw with colors and formatting
+  - [ ] Connect to shell
