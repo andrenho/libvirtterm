@@ -9,6 +9,7 @@ VT* vt_new(size_t rows, size_t columns, VTCallback callback, void* data)
     VT* vt = calloc(1, sizeof(VT));
     vt->rows = rows;
     vt->columns = columns;
+    vt->cursor = (VTCursor) { .column = 0, .row = 0, .visible = true };
     vt->callback = callback;
     vt->data = data;
     vt_resize(vt, rows, columns);
@@ -33,16 +34,7 @@ void vt_resize(VT* vt, size_t rows, size_t columns)
     for (size_t i = 0; i < rows * columns; ++i)
         vt->matrix[i] = (VTChar) { .ch = ' ' };
 
-    vt->matrix[0] = (VTChar) { .ch = 'H', .attrib = DEFAULT_ATTR };
-    vt->matrix[1] = (VTChar) { .ch = 'e', .attrib = DEFAULT_ATTR };
-    vt->matrix[2] = (VTChar) { .ch = 'l', .attrib = DEFAULT_ATTR };
-    vt->matrix[3] = (VTChar) { .ch = 'l', .attrib = DEFAULT_ATTR };
-    vt->matrix[4] = (VTChar) { .ch = 'o', .attrib = DEFAULT_ATTR };
-
-    for (size_t i = 0; i < 4; ++i)
-        vt->matrix[i].attrib.underline = true;
-
-    // TODO - keep chars
+    // TODO - keep chars when resizing
 }
 
 void vt_write(VT* vt, const char* str, size_t str_sz)
@@ -50,4 +42,9 @@ void vt_write(VT* vt, const char* str, size_t str_sz)
     (void) vt;
     (void) str;
     (void) str_sz;
+}
+
+VTChar vt_char(VT* vt, size_t row, size_t column)
+{
+
 }

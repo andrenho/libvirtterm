@@ -1,6 +1,7 @@
 #ifndef LIBVIRTTERM_H_
 #define LIBVIRTTERM_H_
 
+#include <stdbool.h>
 #include <stddef.h>
 
 typedef enum VTColor {
@@ -47,9 +48,16 @@ typedef enum VTEvent {
 typedef struct VT VT;
 typedef void (*VTCallback)(VT* vt, VTEvent* e);
 
+typedef struct VTCursor {
+    bool   visible;
+    size_t row;
+    size_t column;
+} VTCursor;
+
 typedef struct VT {
     size_t     rows;
     size_t     columns;
+    VTCursor   cursor;
     VTCallback callback;
     void*      data;
     VTChar*    matrix;
@@ -57,6 +65,8 @@ typedef struct VT {
 
 VT*  vt_new(size_t rows, size_t columns, VTCallback callback, void* data);
 void vt_free(VT* vt);
+
+VTChar vt_char(VT* vt, size_t row, size_t column);
 
 void vt_resize(VT* vt, size_t rows, size_t columns);
 void vt_write(VT* vt, const char* str, size_t str_sz);

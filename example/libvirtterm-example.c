@@ -31,7 +31,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     (void) argv;
 
     SDL_assert(SDL_Init(SDL_INIT_VIDEO));
-    SDL_assert(SDL_CreateWindowAndRenderer("libvirtterm example", 640, 480, SDL_WINDOW_RESIZABLE, &window, &ren));
+    SDL_assert(SDL_CreateWindowAndRenderer("libvirtterm example", 1024, 768, SDL_WINDOW_RESIZABLE, &window, &ren));
 
     char* bmp_path;
     SDL_asprintf(&bmp_path, "%stoshiba.bmp", SDL_GetBasePath());
@@ -107,6 +107,9 @@ static void draw_char(size_t row, size_t column)
 SDL_AppResult SDL_AppIterate(void *appstate)
 {
     (void) appstate;
+
+    SDL_SetRenderDrawColor(ren, 0, 0, 0, SDL_ALPHA_OPAQUE);
+    SDL_RenderClear(ren);
 
     for (size_t row = 0; row < vt->rows; ++row) {
         for (size_t column = 0; column < vt->columns; ++column) {
