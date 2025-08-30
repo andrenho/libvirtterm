@@ -14,7 +14,7 @@
 #include "../libvirtterm.h"
 #include "colors.h"
 
-#define DEBUG 1
+// #define DEBUG 1
 
 /* We will use this ren to draw into this window every frame. */
 static SDL_Window   *window = NULL;

@@ -1,5 +1,6 @@
 #include "libvirtterm.h"
 
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -173,7 +174,7 @@ static void scroll_up(VT* vt)
     }
 }
 
-static bool add_char(VT* vt, char c, size_t* row, size_t* column)
+static void add_char(VT* vt, char c, size_t* row, size_t* column)
 {
     *row = vt->cursor.row;
     *column = vt->cursor.column;
@@ -203,8 +204,31 @@ static bool add_char(VT* vt, char c, size_t* row, size_t* column)
         --vt->cursor.row;
         vt->cursor.column = 0;
     }
+}
 
-    return true;
+static bool match(const char* data, const char* pattern)
+{
+    size_t i = 0;
+    for (const char* c = pattern; c; ++c) {
+        if (*c != data[i])
+            return false;
+    }
+    return i == strlen(data);
+}
+
+static bool check_escape_sequence(VT* vt)
+{
+    size_t len = strlen(vt->current_buffer);
+    char last = vt->current_buffer[len - 1];
+    if (isalpha(last) || len >= sizeof vt->current_buffer) {
+        if (match(vt->current_buffer, "\eH")) {
+            vt->cursor.column = vt->cursor.row = 0;
+        } else {
+            fprintf(stderr, "Unknown escape sequence: ^[%s\n", vt->current_buffer);
+        }
+        return true;
+    }
+    return false;
 }
 
 void vt_write(VT* vt, const char* str, size_t str_sz)
@@ -213,11 +237,21 @@ void vt_write(VT* vt, const char* str, size_t str_sz)
     memset(rows_updates, 0, (sizeof rows_updates[0]) * vt->rows);
 
     for (size_t i = 0; i < str_sz; ++i) {
-        size_t row, column;
-        if (add_char(vt, str[i], &row, &column)) {
-            rows_updates[row] = true;
-            if (vt->config.update_events == VT_CELL_UPDATE) {
-                vt->push_event(vt, &(VTEvent) { .type = VT_EVENT_CELL_UPDATE, .cell = { row, column } });
+        if (vt->buffer_mode) {
+            vt->current_buffer[strlen(vt->current_buffer)] = str[i];
+            if (check_escape_sequence(vt))
+                vt->buffer_mode = false;
+        } else {
+            if (str[i] == '\e') {
+                memset(vt->current_buffer, 0, sizeof vt->current_buffer);
+                vt->buffer_mode = true;
+            } else {  // show char in screen
+                size_t row, column;
+                add_char(vt, str[i], &row, &column);
+                rows_updates[row] = true;
+                if (vt->config.update_events == VT_CELL_UPDATE) {
+                    vt->push_event(vt, &(VTEvent) { .type = VT_EVENT_CELL_UPDATE, .cell = { row, column } });
+                }
             }
         }
     }
