@@ -217,7 +217,7 @@ static void scroll(VT* vt, int amount)   // negative amount means scroll down
 
         // clear cells
         int initial_cell_to_blank = (vt->scroll_area_top - 1) * vt->columns;
-        clear_cells(vt, initial_cell_to_blank, initial_cell_to_blank + amount_cells);
+        clear_cells(vt, initial_cell_to_blank, initial_cell_to_blank + amount_cells - 1);
     }
 
     if (vt->config.on_scroll == VT_NOTIFY) {
