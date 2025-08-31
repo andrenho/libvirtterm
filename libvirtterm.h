@@ -125,14 +125,14 @@ typedef struct VTEvent {
     VTEventType type;
     union {
         struct {
-            size_t row;
-            size_t column;
+            int row;
+            int column;
         } cell;
         struct {
-            size_t row;
+            int row;
         } row;
         struct {
-            size_t count;
+            int count;
         } scroll_up;
     };
 } VTEvent;
@@ -146,13 +146,13 @@ typedef void (*VTCallback)(VT* vt, VTEvent* e);
 
 typedef struct VTCursor {
     bool   visible;
-    size_t row;
-    size_t column;
+    int    row;
+    int    column;
 } VTCursor;
 
 typedef struct VT {
-    size_t     rows;
-    size_t     columns;
+    int        rows;
+    int        columns;
     VTCursor   cursor;
     VTConfig   config;
     VTAttrib   current_attrib;
@@ -167,15 +167,13 @@ typedef struct VT {
 // Functions
 //
 
-VT*  vt_new(size_t rows, size_t columns, VTCallback callback, VTConfig const* config, void* data);
+VT*  vt_new(int rows, int columns, VTCallback callback, VTConfig const* config, void* data);
 void vt_free(VT* vt);
 
-VTCell vt_char(VT* vt, size_t row, size_t column);
+VTCell vt_char(VT* vt, int row, int column);
 
-void vt_resize(VT* vt, size_t rows, size_t columns);
-void vt_write(VT* vt, const char* str, size_t str_sz);
-int  vt_translate_key(VT* vt, uint16_t key, bool shift, bool ctrl, char* output, size_t max_sz);
-
-void vt_configure(VT* vt, VTConfig* config);
+void vt_resize(VT* vt, int rows, int columns);
+void vt_write(VT* vt, const char* str, int str_sz);
+int  vt_translate_key(VT* vt, uint16_t key, bool shift, bool ctrl, char* output, int max_sz);
 
 #endif

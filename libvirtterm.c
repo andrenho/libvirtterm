@@ -14,12 +14,16 @@
     __typeof__ (b) _b = (b); \
     _a > _b ? _a : _b; })
 
+//
+// INPUT KEYS
+//
+
 typedef struct {
     VTKeys      key;
     const char* str;
-} HidString;
+} InputKey;
 
-static const HidString vt_strings[] = {
+static const InputKey vt_strings[] = {
     { VT_ARROW_UP,    "\e[A "},
     { VT_ARROW_DOWN,  "\e[B" },
     { VT_ARROW_RIGHT, "\e[C" },
@@ -45,7 +49,7 @@ static const HidString vt_strings[] = {
     { VT_F12,         "\e[24~" },
 };
 
-static const HidString vt_strings_ctrl[] = {
+static const InputKey vt_strings_ctrl[] = {
     { VT_ARROW_UP,    "\e[1;5A" },
     { VT_ARROW_DOWN,  "\e[1;5B" },
     { VT_ARROW_RIGHT, "\e[1;5C" },
@@ -71,7 +75,7 @@ static const HidString vt_strings_ctrl[] = {
     { VT_F12,         "\e[24;5~" },
 };
 
-static const HidString vt_strings_shift[] = {
+static const InputKey vt_strings_shift[] = {
     { VT_ARROW_UP,    "\e[1;2A" },
     { VT_ARROW_DOWN,  "\e[1;2B" },
     { VT_ARROW_RIGHT, "\e[1;2C" },
@@ -98,7 +102,7 @@ static const HidString vt_strings_shift[] = {
 };
 
 
-static const HidString vt_strings_ctrl_shift[] = {
+static const InputKey vt_strings_ctrl_shift[] = {
     { VT_ARROW_UP,    "\e[1;6A" },
     { VT_ARROW_DOWN,  "\e[1;6B" },
     { VT_ARROW_RIGHT, "\e[1;6C" },
@@ -124,7 +128,11 @@ static const HidString vt_strings_ctrl_shift[] = {
     { VT_F12,         "\e[24;6~" },
 };
 
-VT* vt_new(size_t rows, size_t columns, VTCallback callback, VTConfig const* config, void* data)
+//
+// INITIALIZATION
+//
+
+VT* vt_new(int rows, int columns, VTCallback callback, VTConfig const* config, void* data)
 {
     VT* vt = calloc(1, sizeof(VT));
     vt->rows = rows;
@@ -147,7 +155,11 @@ void vt_free(VT* vt)
     free(vt);
 }
 
-void vt_resize(VT* vt, size_t rows, size_t columns)
+//
+// TERMINAL MANIPULATION
+//
+
+void vt_resize(VT* vt, int rows, int columns)
 {
     vt->rows = rows;
     vt->columns = columns;
@@ -155,7 +167,7 @@ void vt_resize(VT* vt, size_t rows, size_t columns)
     free(vt->matrix);
 
     vt->matrix = malloc(sizeof(VTCell) * rows * columns);
-    for (size_t i = 0; i < rows * columns; ++i)
+    for (int i = 0; i < rows * columns; ++i)
         vt->matrix[i] = (VTCell) { .ch = ' ', .attrib = DEFAULT_ATTR };
 
     // TODO - keep chars when resizing
@@ -164,26 +176,143 @@ void vt_resize(VT* vt, size_t rows, size_t columns)
 static void scroll_up(VT* vt)
 {
     memmove(vt->matrix, &vt->matrix[vt->columns], vt->columns * (vt->rows - 1) * sizeof(VTCell));
-    for (size_t i = 0; i < vt->columns; ++i) {
+    for (int i = 0; i < vt->columns; ++i) {
         vt->matrix[vt->columns * (vt->rows - 1) + i] = (VTCell) { .ch = ' ', .attrib = vt->current_attrib };
     }
 
     if (vt->config.on_scroll_up == VT_NOTIFY) {
         vt->push_event(vt, &(VTEvent) { .type = VT_EVENT_SCROLL_UP, .scroll_up = { .count = 1 } });
     } else if (vt->config.update_events == VT_ROW_UPDATE) {
-        for (size_t row = 0; row < vt->rows; ++row)
+        for (int row = 0; row < vt->rows; ++row)
             vt->push_event(vt, &(VTEvent) { .type = VT_EVENT_ROW_UPDATE, .row = { .row = row } });
     } else if (vt->config.update_events == VT_CELL_UPDATE) {
         // TODO - only update the cells that actually changed
-        for (size_t row = 0; row < vt->rows; ++row) {
-            for (size_t column = 0; column < vt->columns; ++column) {
+        for (int row = 0; row < vt->rows; ++row) {
+            for (int column = 0; column < vt->columns; ++column) {
                 vt->push_event(vt, &(VTEvent) { .type = VT_EVENT_CELL_UPDATE, .cell = { .column = column, .row = row } });
             }
         }
     }
 }
 
-static void add_char(VT* vt, char c, size_t* row, size_t* column)
+static void clear_cells(VT* vt, int from, int to)
+{
+    bool rows_updates[vt->rows];
+    memset(rows_updates, 0, (sizeof rows_updates[0]) * vt->rows);
+
+    for (int i = from; i <= to; ++i) {
+        int row = i / vt->columns;
+        int column = i % vt->columns;
+        vt->matrix[i].ch = ' ';
+        if (vt->config.update_events == VT_CELL_UPDATE)
+            vt->push_event(vt, &(VTEvent) { .type = VT_EVENT_CELL_UPDATE, .cell = { .row = row, .column = column } });
+        rows_updates[row] = true;
+    }
+
+    if (vt->config.update_events == VT_ROW_UPDATE) {
+        for (int i = 0; i < vt->rows; ++i)
+            if (rows_updates[i])
+                vt->push_event(vt, &(VTEvent) { .type = VT_EVENT_CELL_UPDATE, .row = { .row = i } });
+    }
+}
+
+//
+// PARSE ESCAPE SEQUENCES
+//
+
+static void escape_seq_clear_cells(VT* vt, char mode, int parameter)
+{
+    int cursor = vt->cursor.row * vt->columns + vt->cursor.column;
+
+    if (mode == 'J') {
+        int last_cell = vt->rows * vt->columns - 1;
+        switch (parameter) {
+            case 0:  // cursor to end of screen
+                clear_cells(vt, cursor, last_cell);
+                break;
+            case 1:  // start of screen to cursor
+                clear_cells(vt, 0, cursor);
+                break;
+            case 2:  // all screen
+                clear_cells(vt, 0, last_cell);
+                break;
+            case 3:
+                break;
+            default:
+                fprintf(stderr, "Unsupported parameter for ESC[#J");
+        }
+    } else if (mode == 'K') {
+        int start_of_line = vt->cursor.row * vt->columns;
+        int end_of_line = (vt->cursor.row + 1) * vt->columns - 1;
+        switch (parameter) {
+            case 0:  // cursor to end of screen
+                clear_cells(vt, cursor, end_of_line);
+                break;
+            case 1:  // start of screen to cursor
+                clear_cells(vt, start_of_line, cursor);
+                break;
+            case 2:  // all screen
+                clear_cells(vt, start_of_line, end_of_line);
+                break;
+            default:
+                fprintf(stderr, "Unsupported parameter for ESC[#K");
+        }
+    }
+}
+
+static bool match(const char* data, const char* pattern, int args[8])
+{
+    int i = 0;
+
+    int argn = 0;
+    memset(args, 0, sizeof args);
+
+    for (const char* p = pattern; *p; ++p) {
+        while (data[i] == ';')
+            ++i;
+        if (*p == '#') {
+            char* endptr;
+            args[argn++] = strtol(&data[i], &endptr, 10);
+            i = endptr - data;
+        } else if (*p != data[i] && data[i] != ';') {
+            return false;
+        } else {
+            ++i;
+        }
+    }
+    return i == strlen(data);
+}
+
+static bool parse_escape_sequence(VT* vt)
+{
+    int args[8] = {0};
+    int len = strlen(vt->current_buffer);
+    char last = vt->current_buffer[len - 1];
+    if (isalpha(last) || len >= sizeof vt->current_buffer) {  // absolute cursor position
+        printf("%s\n", vt->current_buffer);
+#define MATCH(pattern) if (match(vt->current_buffer, pattern, args))
+        MATCH("[##H") {
+            vt->cursor.row = MAX(args[0] - 1, 0);
+            vt->cursor.column = MAX(args[1] - 1, 0);
+        }
+        else MATCH("A") vt->cursor.row = MAX(vt->cursor.row - 1, 0);
+        else MATCH("C") vt->cursor.row = MIN(vt->cursor.column + 1, vt->columns - 1);
+        else MATCH("[#J") escape_seq_clear_cells(vt, 'J', args[0]);
+        else MATCH("[#K") escape_seq_clear_cells(vt, 'K', args[0]);
+        else {
+            fprintf(stderr, "Unknown escape sequence: ^[%s\n", vt->current_buffer);
+        }
+#undef MATCH
+        return true;
+    }
+    return false;
+}
+
+//
+// ADD TEXT TO TERMINAL
+//
+
+static void add_char(VT* vt, char c, int* row, int* column)
 {
     *row = vt->cursor.row;
     *column = vt->cursor.column;
@@ -199,7 +328,7 @@ static void add_char(VT* vt, char c, size_t* row, size_t* column)
             vt->cursor.column = MAX(vt->cursor.column - 1, 0);
             break;
         case '\t':
-            for (size_t i = 0; i < 8; ++i)
+            for (int i = 0; i < 8; ++i)
                 add_char(vt, ' ', row, column);
             break;
         case 7:
@@ -225,54 +354,13 @@ static void add_char(VT* vt, char c, size_t* row, size_t* column)
     }
 }
 
-static bool match(const char* data, const char* pattern, int args[8])
-{
-    size_t i = 0;
-    size_t argn = 0;
-    for (const char* p = pattern; *p; ++p) {
-        while (data[i] == ';')
-            ++i;
-        if (*p == '#') {
-            char* endptr;
-            args[argn++] = strtol(&data[i], &endptr, 10);
-            i = endptr - data;
-        } else if (*p != data[i] && data[i] != ';') {
-            return false;
-        } else {
-            ++i;
-        }
-    }
-    return i == strlen(data);
-}
 
-static bool parse_escape_sequence(VT* vt)
-{
-    int args[8] = {0};
-    size_t len = strlen(vt->current_buffer);
-    char last = vt->current_buffer[len - 1];
-    if (isalpha(last) || len >= sizeof vt->current_buffer) {  // absolute cursor position
-#define MATCH(pattern) if (match(vt->current_buffer, pattern, args))
-        MATCH("[##H") {
-            vt->cursor.row = MAX(args[0] - 1, 0);
-            vt->cursor.column = MAX(args[1] - 1, 0);
-        }
-        else MATCH("A") vt->cursor.row = MAX(vt->cursor.row - 1, 0);
-        else MATCH("C") vt->cursor.row = MIN(vt->cursor.column + 1, vt->columns - 1);
-        else {
-            fprintf(stderr, "Unknown escape sequence: ^[%s\n", vt->current_buffer);
-        }
-#undef MATCH
-        return true;
-    }
-    return false;
-}
-
-void vt_write(VT* vt, const char* str, size_t str_sz)
+void vt_write(VT* vt, const char* str, int str_sz)
 {
     bool rows_updates[vt->rows];
     memset(rows_updates, 0, (sizeof rows_updates[0]) * vt->rows);
 
-    for (size_t i = 0; i < str_sz; ++i) {
+    for (int i = 0; i < str_sz; ++i) {
         if (vt->buffer_mode) {
             vt->current_buffer[strlen(vt->current_buffer)] = str[i];
             if (parse_escape_sequence(vt))
@@ -282,7 +370,7 @@ void vt_write(VT* vt, const char* str, size_t str_sz)
                 memset(vt->current_buffer, 0, sizeof vt->current_buffer);
                 vt->buffer_mode = true;
             } else {  // show char in screen
-                size_t row, column;
+                int row, column;
                 add_char(vt, str[i], &row, &column);
                 rows_updates[row] = true;
                 if (vt->config.update_events == VT_CELL_UPDATE) {
@@ -293,12 +381,17 @@ void vt_write(VT* vt, const char* str, size_t str_sz)
     }
 
     if (vt->config.update_events == VT_ROW_UPDATE) {
-        for (size_t i = 0; i < vt->rows; ++i)
-            vt->push_event(vt, &(VTEvent) { .type = VT_EVENT_CELL_UPDATE, .row = { .row = i } });
+        for (int i = 0; i < vt->rows; ++i)
+            if (rows_updates[i])
+                vt->push_event(vt, &(VTEvent) { .type = VT_EVENT_CELL_UPDATE, .row = { .row = i } });
     }
 }
 
-VTCell vt_char(VT* vt, size_t row, size_t column)
+//
+// INFORMATION
+//
+
+VTCell vt_char(VT* vt, int row, int column)
 {
     VTCell ch = vt->matrix[row * vt->columns + column];
     if (vt->cursor.visible && vt->cursor.row == row && vt->cursor.column == column && vt->config.automatic_cursor) {
@@ -308,12 +401,7 @@ VTCell vt_char(VT* vt, size_t row, size_t column)
     return ch;
 }
 
-void vt_configure(VT* vt, VTConfig* config)
-{
-    vt->config = *config;
-}
-
-int vt_translate_key(VT* vt, uint16_t key, bool shift, bool ctrl, char* output, size_t max_sz)
+int vt_translate_key(VT* vt, uint16_t key, bool shift, bool ctrl, char* output, int max_sz)
 {
     (void) vt;
 
@@ -326,7 +414,7 @@ int vt_translate_key(VT* vt, uint16_t key, bool shift, bool ctrl, char* output, 
 
 #define CHECK_KBD(SHIFT, CTRL, ARRAY) \
     if (SHIFT && CTRL) \
-        for (size_t i = 0; i < (sizeof ARRAY) / (sizeof ARRAY[0]); ++i) \
+        for (int i = 0; i < (sizeof ARRAY) / (sizeof ARRAY[0]); ++i) \
             if (key == ARRAY[i].key) \
                 return snprintf(output, max_sz, "%s", ARRAY[i].str);
 
