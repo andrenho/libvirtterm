@@ -5,6 +5,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define MAX(a,b) \
+    ({ __typeof__ (a) _a = (a); \
+    __typeof__ (b) _b = (b); \
+    _a > _b ? _a : _b; })
+
 typedef struct {
     VTKeys      key;
     const char* str;
@@ -206,23 +211,35 @@ static void add_char(VT* vt, char c, size_t* row, size_t* column)
     }
 }
 
-static bool match(const char* data, const char* pattern)
+static bool match(const char* data, const char* pattern, int args[8])
 {
     size_t i = 0;
-    for (const char* c = pattern; c; ++c) {
-        if (*c != data[i])
+    size_t argn = 0;
+    for (const char* p = pattern; *p; ++p) {
+        while (data[i] == ';')
+            ++i;
+        if (*p == '#') {
+            char* endptr;
+            args[argn++] = strtol(&data[i], &endptr, 10);
+            i = endptr - data;
+        } else if (*p != data[i] && data[i] != ';') {
             return false;
+        } else {
+            ++i;
+        }
     }
     return i == strlen(data);
 }
 
 static bool check_escape_sequence(VT* vt)
 {
+    int args[8] = {0};
     size_t len = strlen(vt->current_buffer);
     char last = vt->current_buffer[len - 1];
-    if (isalpha(last) || len >= sizeof vt->current_buffer) {
-        if (match(vt->current_buffer, "\eH")) {
-            vt->cursor.column = vt->cursor.row = 0;
+    if (isalpha(last) || len >= sizeof vt->current_buffer) {  // absolute cursor position
+        if (match(vt->current_buffer, "[##H", args)) {
+            vt->cursor.row = MAX(args[0] - 1, 0);
+            vt->cursor.column = MAX(args[1] - 1, 0);
         } else {
             fprintf(stderr, "Unknown escape sequence: ^[%s\n", vt->current_buffer);
         }
