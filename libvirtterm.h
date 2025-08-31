@@ -98,7 +98,8 @@ typedef struct __attribute__((packed)) VTAttrib {
     bool blink       : 1;   // automatically managed
     bool reverse     : 1;   //       "          "
     bool invisible   : 1;   //       "          "
-    int  padding     : 2;
+    bool italic     : 1;
+    int  padding     : 1;
     VTColor bg_color : 4;
     VTColor fg_color : 4;
 } VTAttrib;

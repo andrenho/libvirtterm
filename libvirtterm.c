@@ -279,11 +279,65 @@ static void escape_seq_clear_cells(VT* vt, char mode, int parameter)
     }
 }
 
-static bool match(const char* data, const char* pattern, int args[8])
+static void update_current_attrib(VT* vt, int arg)
+{
+    switch (arg) {
+        case 0:
+            vt->current_attrib.bold = false;
+            vt->current_attrib.dim = false;
+            vt->current_attrib.underline = false;
+            vt->current_attrib.blink = false;
+            vt->current_attrib.reverse = false;
+            vt->current_attrib.invisible = false;
+            vt->current_attrib.italic = false;
+            vt->current_attrib.fg_color = vt->config.default_fg_color;
+            vt->current_attrib.bg_color = vt->config.default_bg_color;
+            break;
+        case 1: vt->current_attrib.bold = true; break;
+        case 2: vt->current_attrib.dim = true; break;
+        case 3: vt->current_attrib.italic = true; break;
+        case 4: vt->current_attrib.underline = true; break;
+        case 5:
+        case 6:
+            vt->current_attrib.blink = true;
+            break;
+        case 7: vt->current_attrib.reverse = true; break;
+        case 8: vt->current_attrib.invisible = true; break;
+        case 22:
+            vt->current_attrib.bold = false;
+            vt->current_attrib.dim = false;
+            break;
+        case 23: vt->current_attrib.italic = false; break;
+        case 24: vt->current_attrib.underline = false; break;
+        case 25: vt->current_attrib.blink = false; break;
+        case 27: vt->current_attrib.reverse = false; break;
+        case 28: vt->current_attrib.invisible = false; break;
+        case 30: vt->current_attrib.fg_color = VT_BLACK; break;
+        case 31: vt->current_attrib.fg_color = VT_RED; break;
+        case 32: vt->current_attrib.fg_color = VT_GREEN; break;
+        case 33: vt->current_attrib.fg_color = VT_YELLOW; break;
+        case 34: vt->current_attrib.fg_color = VT_BLUE; break;
+        case 35: vt->current_attrib.fg_color = VT_MAGENTA; break;
+        case 36: vt->current_attrib.fg_color = VT_CYAN; break;
+        case 37: vt->current_attrib.fg_color = VT_WHITE; break;
+        case 39: vt->current_attrib.fg_color = vt->config.default_fg_color; break;
+        case 40: vt->current_attrib.bg_color = VT_BLACK; break;
+        case 41: vt->current_attrib.bg_color = VT_RED; break;
+        case 42: vt->current_attrib.bg_color = VT_GREEN; break;
+        case 43: vt->current_attrib.bg_color = VT_YELLOW; break;
+        case 44: vt->current_attrib.bg_color = VT_BLUE; break;
+        case 45: vt->current_attrib.bg_color = VT_MAGENTA; break;
+        case 46: vt->current_attrib.bg_color = VT_CYAN; break;
+        case 47: vt->current_attrib.bg_color = VT_WHITE; break;
+        case 49: vt->current_attrib.bg_color = vt->config.default_fg_color; break;
+    }
+}
+
+static bool match(const char* data, const char* pattern, int args[8], int* argn)
 {
     int i = 0;
 
-    int argn = 0;
+    *argn = 0;
     memset(args, 0, sizeof args[0] * 8);
 
     if (data[strlen(data) - 1] != pattern[strlen(pattern) - 1])  // fail fast
@@ -294,7 +348,7 @@ static bool match(const char* data, const char* pattern, int args[8])
             ++i;
         if (*p == '#') {
             char* endptr;
-            args[argn++] = strtol(&data[i], &endptr, 10);
+            args[(*argn)++] = strtol(&data[i], &endptr, 10);
             i = endptr - data;
         } else if (*p != data[i] && data[i] != ';') {
             return false;
@@ -302,17 +356,20 @@ static bool match(const char* data, const char* pattern, int args[8])
             ++i;
         }
     }
+
     return i == strlen(data);
 }
 
 static bool parse_escape_sequence(VT* vt)
 {
     int args[8] = {0};
+    int argn;
+
     int len = strlen(vt->current_buffer);
     char last = vt->current_buffer[len - 1];
     if (isalpha(last) || len >= sizeof vt->current_buffer) {  // absolute cursor position
         // printf("%s\n", vt->current_buffer);
-#define MATCH(pattern) (match(vt->current_buffer, pattern, args))
+#define MATCH(pattern) (match(vt->current_buffer, pattern, args, &argn))
         if MATCH("[##H") {
             vt->cursor.row = MAX(args[0] - 1, 0);
             vt->cursor.column = MAX(args[1] - 1, 0);
@@ -331,6 +388,11 @@ static bool parse_escape_sequence(VT* vt)
             vt->scroll_area_bottom = args[1];
             vt->cursor.column = 0;
             vt->cursor.row = 0;
+        }
+        else if (MATCH("[##m")) {
+            update_current_attrib(vt, 0);
+            for (int i = 0; i < argn; ++i)
+                update_current_attrib(vt, args[i]);
         }
         else if (MATCH("[?2004h") || MATCH("[?2004l")) /* TODO */ ;  // ignore for now
         else {
