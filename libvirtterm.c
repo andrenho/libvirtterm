@@ -321,6 +321,17 @@ static bool parse_escape_sequence(VT* vt)
         else if MATCH("C") vt->cursor.row = MIN(vt->cursor.column + 1, vt->columns - 1);
         else if MATCH("[#J") escape_seq_clear_cells(vt, 'J', args[0]);
         else if MATCH("[#K") escape_seq_clear_cells(vt, 'K', args[0]);
+        else if MATCH("M") {
+            if (vt->cursor.row == 0)
+                scroll(vt, -1);
+            vt->cursor.row = MAX(vt->cursor.row - 1, 0);
+        }
+        else if (MATCH("[##r") && args[0] <= args[1]) {
+            vt->scroll_area_top = args[0];
+            vt->scroll_area_bottom = args[1];
+            vt->cursor.column = 0;
+            vt->cursor.row = 0;
+        }
         else if (MATCH("[?2004h") || MATCH("[?2004l")) /* TODO */ ;  // ignore for now
         else {
             fprintf(stderr, "Unknown escape sequence: ^[%s\n", vt->current_buffer);
@@ -370,7 +381,7 @@ static void add_char(VT* vt, char c, int* row, int* column)
         ++vt->cursor.row;
     }
 
-    if (vt->cursor.row == vt->rows) {
+    if (vt->cursor.row == vt->scroll_area_bottom) {
         scroll(vt, 1);
         --vt->cursor.row;
         vt->cursor.column = 0;
