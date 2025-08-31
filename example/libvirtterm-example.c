@@ -35,7 +35,9 @@ static bool         play_beep = false;
 void vt_callback(VT* vt, VTEvent* e)
 {
     (void) vt;
-    (void) e;
+
+    if (e->type == VT_EVENT_BELL)
+        play_beep = true;
 }
 
 
@@ -189,7 +191,7 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
 
 static void draw_char(size_t row, size_t column)
 {
-    VTChar chr = vt_char(vt, row, column);
+    VTCell chr = vt_char(vt, row, column);
     SDL_FRect origin = { chr.ch % 32 * FONT_W, chr.ch / 32 * FONT_H, FONT_W, FONT_H };
     SDL_FRect dest = { column * FONT_W * ZOOM + BORDER, row * FONT_H * ZOOM + BORDER, FONT_W * ZOOM, FONT_H * ZOOM };
 

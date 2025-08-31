@@ -154,18 +154,18 @@ void vt_resize(VT* vt, size_t rows, size_t columns)
 
     free(vt->matrix);
 
-    vt->matrix = malloc(sizeof(VTChar) * rows * columns);
+    vt->matrix = malloc(sizeof(VTCell) * rows * columns);
     for (size_t i = 0; i < rows * columns; ++i)
-        vt->matrix[i] = (VTChar) { .ch = ' ', .attrib = DEFAULT_ATTR };
+        vt->matrix[i] = (VTCell) { .ch = ' ', .attrib = DEFAULT_ATTR };
 
     // TODO - keep chars when resizing
 }
 
 static void scroll_up(VT* vt)
 {
-    memmove(vt->matrix, &vt->matrix[vt->columns], vt->columns * (vt->rows - 1) * sizeof(VTChar));
+    memmove(vt->matrix, &vt->matrix[vt->columns], vt->columns * (vt->rows - 1) * sizeof(VTCell));
     for (size_t i = 0; i < vt->columns; ++i) {
-        vt->matrix[vt->columns * (vt->rows - 1) + i] = (VTChar) { .ch = ' ', .attrib = vt->current_attrib };
+        vt->matrix[vt->columns * (vt->rows - 1) + i] = (VTCell) { .ch = ' ', .attrib = vt->current_attrib };
     }
 
     if (vt->config.on_scroll_up == VT_NOTIFY) {
@@ -188,22 +188,29 @@ static void add_char(VT* vt, char c, size_t* row, size_t* column)
     *row = vt->cursor.row;
     *column = vt->cursor.column;
 
-    if (c == 10) {
-        ++vt->cursor.row;
-    } else if (c == 13) {
-        vt->cursor.column = 0;
-    } else if (c == '\b') {
-        if (vt->cursor.column > 0)
-            --vt->cursor.column;
-    } else if (c == '\t') {
-        for (size_t i = 0; i < 8; ++i)
-            add_char(vt, ' ', row, column);
-    } else {
-        vt->matrix[vt->cursor.row * vt->columns + vt->cursor.column] = (VTChar) {
-            .ch = c,
-            .attrib = vt->current_attrib,
-        };
-        ++vt->cursor.column;
+    switch (c) {
+        case 10:
+            ++vt->cursor.row;
+            break;
+        case 13:
+            vt->cursor.column = 0;
+            break;
+        case '\b':
+            vt->cursor.column = MAX(vt->cursor.column - 1, 0);
+            break;
+        case '\t':
+            for (size_t i = 0; i < 8; ++i)
+                add_char(vt, ' ', row, column);
+            break;
+        case 7:
+            vt->push_event(vt, &(VTEvent) { .type = VT_EVENT_BELL });
+            break;
+        default:
+            vt->matrix[vt->cursor.row * vt->columns + vt->cursor.column] = (VTCell) {
+                .ch = c,
+                .attrib = vt->current_attrib,
+            };
+            ++vt->cursor.column;
     }
 
     if (vt->cursor.column == vt->columns) {
@@ -291,9 +298,9 @@ void vt_write(VT* vt, const char* str, size_t str_sz)
     }
 }
 
-VTChar vt_char(VT* vt, size_t row, size_t column)
+VTCell vt_char(VT* vt, size_t row, size_t column)
 {
-    VTChar ch = vt->matrix[row * vt->columns + column];
+    VTCell ch = vt->matrix[row * vt->columns + column];
     if (vt->cursor.visible && vt->cursor.row == row && vt->cursor.column == column && vt->config.automatic_cursor) {
         ch.attrib.bg_color = vt->config.cursor_color;
         ch.attrib.fg_color = vt->config.cursor_char_color;

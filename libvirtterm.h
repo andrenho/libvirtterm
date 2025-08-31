@@ -5,6 +5,10 @@
 #include <stdint.h>
 #include <stddef.h>
 
+//
+// Keys
+//
+
 typedef enum VTKeys {
     VT_ESC = 0x100,
     VT_F1,
@@ -33,6 +37,10 @@ typedef enum VTKeys {
     VT_TAB,
 } VTKeys;
 
+//
+// Colors
+//
+
 typedef enum VTColor {
     VT_BLACK = 0,
     VT_RED,
@@ -51,6 +59,10 @@ typedef enum VTColor {
     VT_BRIGHT_CYAN,
     VT_BRIGHT_WHITE,
 } VTColor;
+
+//
+// Config
+//
 
 typedef enum { VT_NO_UPDATES, VT_CELL_UPDATE, VT_ROW_UPDATE } VTUpdateEvents;
 typedef enum { VT_NOTIFY, VT_REFRESH } VTScrollUpAction;
@@ -75,6 +87,10 @@ typedef struct VTConfig {
     .on_scroll_up = VT_REFRESH,             \
 }
 
+//
+// Cells
+//
+
 typedef struct __attribute__((packed)) VTAttrib {
     bool bold        : 1;
     bool dim         : 1;
@@ -89,15 +105,20 @@ typedef struct __attribute__((packed)) VTAttrib {
 
 #define DEFAULT_ATTR ((VTAttrib) { .bold = false, .dim = false, .underline = false, .blink = false, .reverse = false, .invisible = false, .bg_color = vt->config.default_bg_color, .fg_color = vt->config.default_fg_color })
 
-typedef struct __attribute__((packed)) VTChar {
+typedef struct __attribute__((packed)) VTCell {
     char     ch;
     VTAttrib attrib;
-} VTChar;
+} VTCell;
+
+//
+// Events
+//
 
 typedef enum VTEventType {
     VT_EVENT_CELL_UPDATE,
     VT_EVENT_ROW_UPDATE,
     VT_EVENT_SCROLL_UP,
+    VT_EVENT_BELL,
 } VTEventType;
 
 typedef struct VTEvent {
@@ -115,6 +136,10 @@ typedef struct VTEvent {
         } scroll_up;
     };
 } VTEvent;
+
+//
+// Terminal
+//
 
 typedef struct VT VT;
 typedef void (*VTCallback)(VT* vt, VTEvent* e);
@@ -135,13 +160,17 @@ typedef struct VT {
     void*      data;
     char       current_buffer[32];
     bool       buffer_mode;
-    VTChar*    matrix;
+    VTCell*    matrix;
 } VT;
+
+//
+// Functions
+//
 
 VT*  vt_new(size_t rows, size_t columns, VTCallback callback, VTConfig const* config, void* data);
 void vt_free(VT* vt);
 
-VTChar vt_char(VT* vt, size_t row, size_t column);
+VTCell vt_char(VT* vt, size_t row, size_t column);
 
 void vt_resize(VT* vt, size_t rows, size_t columns);
 void vt_write(VT* vt, const char* str, size_t str_sz);
