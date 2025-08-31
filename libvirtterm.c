@@ -140,6 +140,8 @@ VT* vt_new(int rows, int columns, VTCallback callback, VTConfig const* config, v
     vt->cursor = (VTCursor) { .column = 0, .row = 0, .visible = true };
     vt->config = *config;
     vt->current_attrib = DEFAULT_ATTR;
+    vt->scroll_area_top = 1;
+    vt->scroll_area_bottom = vt->rows;
     vt->push_event = callback;
     vt->data = data;
     memset(vt->current_buffer, 0, sizeof vt->current_buffer);
@@ -173,28 +175,6 @@ void vt_resize(VT* vt, int rows, int columns)
     // TODO - keep chars when resizing
 }
 
-static void scroll_up(VT* vt)
-{
-    memmove(vt->matrix, &vt->matrix[vt->columns], vt->columns * (vt->rows - 1) * sizeof(VTCell));
-    for (int i = 0; i < vt->columns; ++i) {
-        vt->matrix[vt->columns * (vt->rows - 1) + i] = (VTCell) { .ch = ' ', .attrib = vt->current_attrib };
-    }
-
-    if (vt->config.on_scroll_up == VT_NOTIFY) {
-        vt->push_event(vt, &(VTEvent) { .type = VT_EVENT_SCROLL_UP, .scroll_up = { .count = 1 } });
-    } else if (vt->config.update_events == VT_ROW_UPDATE) {
-        for (int row = 0; row < vt->rows; ++row)
-            vt->push_event(vt, &(VTEvent) { .type = VT_EVENT_ROW_UPDATE, .row = { .row = row } });
-    } else if (vt->config.update_events == VT_CELL_UPDATE) {
-        // TODO - only update the cells that actually changed
-        for (int row = 0; row < vt->rows; ++row) {
-            for (int column = 0; column < vt->columns; ++column) {
-                vt->push_event(vt, &(VTEvent) { .type = VT_EVENT_CELL_UPDATE, .cell = { .column = column, .row = row } });
-            }
-        }
-    }
-}
-
 static void clear_cells(VT* vt, int from, int to)
 {
     bool rows_updates[vt->rows];
@@ -213,6 +193,45 @@ static void clear_cells(VT* vt, int from, int to)
         for (int i = 0; i < vt->rows; ++i)
             if (rows_updates[i])
                 vt->push_event(vt, &(VTEvent) { .type = VT_EVENT_CELL_UPDATE, .row = { .row = i } });
+    }
+}
+
+static void scroll(VT* vt, int amount)   // negative amount means scroll down
+{
+    VTCell* m = vt->matrix;
+    VTCell* initial_cell = &m[(vt->scroll_area_top - 1) * vt->columns];
+    int cell_count = (vt->scroll_area_bottom - vt->scroll_area_top) * vt->columns;
+    int amount_cells = abs(amount * vt->columns);
+
+    if (amount > 0) {
+        // move cells
+        memmove(initial_cell, initial_cell + amount_cells, cell_count * sizeof(VTCell));
+
+        // clear cells
+        int initial_cell_to_blank = (vt->scroll_area_bottom - 1) * vt->columns;
+        clear_cells(vt, initial_cell_to_blank, initial_cell_to_blank + amount_cells - 1);
+
+    } else if (amount < 0) {
+        // move cells
+        memmove(initial_cell + amount_cells, initial_cell, cell_count * sizeof(VTCell));
+
+        // clear cells
+        int initial_cell_to_blank = (vt->scroll_area_top - 1) * vt->columns;
+        clear_cells(vt, initial_cell_to_blank, initial_cell_to_blank + amount_cells);
+    }
+
+    if (vt->config.on_scroll == VT_NOTIFY) {
+        vt->push_event(vt, &(VTEvent) { .type = VT_EVENT_SCROLL_UP, .scroll = { .count = 1, .top_row = vt->scroll_area_top, .bottom_row = vt->scroll_area_bottom } });
+    } if (vt->config.update_events == VT_ROW_UPDATE) {
+        for (int row = vt->scroll_area_top - 1; row <= vt->scroll_area_bottom - 1; ++row)
+            vt->push_event(vt, &(VTEvent) { .type = VT_EVENT_ROW_UPDATE, .row = { .row = row } });
+    } else if (vt->config.update_events == VT_CELL_UPDATE) {
+        // TODO - only update the cells that actually changed
+        for (int row = vt->scroll_area_top - 1; row <= vt->scroll_area_bottom - 1; ++row) {
+            for (int column = 0; column < vt->columns; ++column) {
+                vt->push_event(vt, &(VTEvent) { .type = VT_EVENT_CELL_UPDATE, .cell = { .column = column, .row = row } });
+            }
+        }
     }
 }
 
@@ -265,7 +284,10 @@ static bool match(const char* data, const char* pattern, int args[8])
     int i = 0;
 
     int argn = 0;
-    memset(args, 0, sizeof args);
+    memset(args, 0, sizeof args[0] * 8);
+
+    if (data[strlen(data) - 1] != pattern[strlen(pattern) - 1])  // fail fast
+        return false;
 
     for (const char* p = pattern; *p; ++p) {
         while (data[i] == ';')
@@ -289,16 +311,17 @@ static bool parse_escape_sequence(VT* vt)
     int len = strlen(vt->current_buffer);
     char last = vt->current_buffer[len - 1];
     if (isalpha(last) || len >= sizeof vt->current_buffer) {  // absolute cursor position
-        printf("%s\n", vt->current_buffer);
-#define MATCH(pattern) if (match(vt->current_buffer, pattern, args))
-        MATCH("[##H") {
+        // printf("%s\n", vt->current_buffer);
+#define MATCH(pattern) (match(vt->current_buffer, pattern, args))
+        if MATCH("[##H") {
             vt->cursor.row = MAX(args[0] - 1, 0);
             vt->cursor.column = MAX(args[1] - 1, 0);
         }
-        else MATCH("A") vt->cursor.row = MAX(vt->cursor.row - 1, 0);
-        else MATCH("C") vt->cursor.row = MIN(vt->cursor.column + 1, vt->columns - 1);
-        else MATCH("[#J") escape_seq_clear_cells(vt, 'J', args[0]);
-        else MATCH("[#K") escape_seq_clear_cells(vt, 'K', args[0]);
+        else if MATCH("A") vt->cursor.row = MAX(vt->cursor.row - 1, 0);
+        else if MATCH("C") vt->cursor.row = MIN(vt->cursor.column + 1, vt->columns - 1);
+        else if MATCH("[#J") escape_seq_clear_cells(vt, 'J', args[0]);
+        else if MATCH("[#K") escape_seq_clear_cells(vt, 'K', args[0]);
+        else if (MATCH("[?2004h") || MATCH("[?2004l")) /* TODO */ ;  // ignore for now
         else {
             fprintf(stderr, "Unknown escape sequence: ^[%s\n", vt->current_buffer);
         }
@@ -348,7 +371,7 @@ static void add_char(VT* vt, char c, int* row, int* column)
     }
 
     if (vt->cursor.row == vt->rows) {
-        scroll_up(vt);
+        scroll(vt, 1);
         --vt->cursor.row;
         vt->cursor.column = 0;
     }
