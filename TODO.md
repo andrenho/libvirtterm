@@ -1,5 +1,10 @@
--[ ] Create sample application
-  - [ ] Load and manage font
-  - [ ] Terminal framebuffer
-  - [ ] Draw with colors and formatting
-  - [ ] Connect to shell
+-[x] Create sample application
+  - [x] Load and manage font
+  - [x] Terminal framebuffer
+  - [x] Draw with colors and formatting
+  - [x] Connect to shell
+- [ ] Terminal
+  - [ ] Escape sequences
+  - [ ] Blink
+  - [ ] Mouse support
+  - [ ] Check TODOs in the code

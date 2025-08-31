@@ -19,9 +19,13 @@
 /* We will use this ren to draw into this window every frame. */
 static SDL_Window   *window = NULL;
 static SDL_Renderer *ren = NULL;
+static SDL_AudioStream *stream = NULL;
+static Uint8 *wav_data = NULL;
+static Uint32 wav_data_len = 0;
 static SDL_Texture  *font = NULL;
 static VT           *vt = NULL;
 static int          master_pty = -1;
+static bool         play_beep = false;
 
 #define FONT_W 8
 #define FONT_H 15
@@ -44,7 +48,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     //
     // initialize SDL
     //
-    SDL_assert(SDL_Init(SDL_INIT_VIDEO));
+    SDL_assert(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO));
     SDL_assert(SDL_CreateWindowAndRenderer("libvirtterm example", 1024, 768, SDL_WINDOW_RESIZABLE, &window, &ren));
     SDL_StartTextInput(window);
 
@@ -68,6 +72,25 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     SDL_SetTextureBlendMode(font, SDL_BLENDMODE_BLEND);
 
     SDL_DestroySurface(font_sf);
+
+    //
+    // initialize audio (for beep)
+    //
+    SDL_AudioSpec spec;
+    char* wav_path;
+    SDL_asprintf(&wav_path, "%sbeep.wav", SDL_GetBasePath());
+    if (!SDL_LoadWAV(wav_path, &spec, &wav_data, &wav_data_len)) {
+        SDL_Log("Couldn't load .wav file: %s", SDL_GetError());
+        return SDL_APP_FAILURE;
+    }
+
+    stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, NULL, NULL);
+    if (!stream) {
+        SDL_Log("Couldn't create audio stream: %s", SDL_GetError());
+        return SDL_APP_FAILURE;
+    }
+
+    SDL_ResumeAudioStreamDevice(stream);
 
     //
     // initialize libvirtterm
@@ -200,6 +223,19 @@ SDL_AppResult SDL_AppIterate(void *appstate)
 {
     (void) appstate;
 
+    //
+    // continue playing beep
+    //
+    if (play_beep) {
+        while (SDL_GetAudioStreamQueued(stream) < (int)wav_data_len) {
+            SDL_PutAudioStreamData(stream, wav_data, wav_data_len);
+        }
+        play_beep = false;
+    }
+
+    //
+    // process PTY
+    //
     char buf[256];
     int n = read(master_pty, buf, sizeof(buf));
     if (n == 0) {
@@ -213,6 +249,9 @@ SDL_AppResult SDL_AppIterate(void *appstate)
         vt_write(vt, buf, n);
     }
 
+    //
+    // render screen
+    //
     SDL_SetRenderDrawColor(ren, 0, 0, 0, SDL_ALPHA_OPAQUE);
     SDL_RenderClear(ren);
 

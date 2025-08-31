@@ -5,6 +5,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define MIN(a,b) \
+    ({ __typeof__ (a) _a = (a); \
+    __typeof__ (b) _b = (b); \
+    _a < _b ? _a : _b; })
 #define MAX(a,b) \
     ({ __typeof__ (a) _a = (a); \
     __typeof__ (b) _b = (b); \
@@ -191,6 +195,9 @@ static void add_char(VT* vt, char c, size_t* row, size_t* column)
     } else if (c == '\b') {
         if (vt->cursor.column > 0)
             --vt->cursor.column;
+    } else if (c == '\t') {
+        for (size_t i = 0; i < 8; ++i)
+            add_char(vt, ' ', row, column);
     } else {
         vt->matrix[vt->cursor.row * vt->columns + vt->cursor.column] = (VTChar) {
             .ch = c,
@@ -231,18 +238,23 @@ static bool match(const char* data, const char* pattern, int args[8])
     return i == strlen(data);
 }
 
-static bool check_escape_sequence(VT* vt)
+static bool parse_escape_sequence(VT* vt)
 {
     int args[8] = {0};
     size_t len = strlen(vt->current_buffer);
     char last = vt->current_buffer[len - 1];
     if (isalpha(last) || len >= sizeof vt->current_buffer) {  // absolute cursor position
-        if (match(vt->current_buffer, "[##H", args)) {
+#define MATCH(pattern) if (match(vt->current_buffer, pattern, args))
+        MATCH("[##H") {
             vt->cursor.row = MAX(args[0] - 1, 0);
             vt->cursor.column = MAX(args[1] - 1, 0);
-        } else {
+        }
+        else MATCH("A") vt->cursor.row = MAX(vt->cursor.row - 1, 0);
+        else MATCH("C") vt->cursor.row = MIN(vt->cursor.column + 1, vt->columns - 1);
+        else {
             fprintf(stderr, "Unknown escape sequence: ^[%s\n", vt->current_buffer);
         }
+#undef MATCH
         return true;
     }
     return false;
@@ -256,7 +268,7 @@ void vt_write(VT* vt, const char* str, size_t str_sz)
     for (size_t i = 0; i < str_sz; ++i) {
         if (vt->buffer_mode) {
             vt->current_buffer[strlen(vt->current_buffer)] = str[i];
-            if (check_escape_sequence(vt))
+            if (parse_escape_sequence(vt))
                 vt->buffer_mode = false;
         } else {
             if (str[i] == '\e') {
@@ -315,6 +327,7 @@ int vt_translate_key(VT* vt, uint16_t key, bool shift, bool ctrl, char* output, 
     CHECK_KBD(shift,  !ctrl, vt_strings_shift)
     CHECK_KBD(!shift, ctrl,  vt_strings_ctrl)
     CHECK_KBD(shift,  ctrl,  vt_strings_ctrl_shift)
+#undef CHECK_KBD
 
     if (key != 0) {
         if (ctrl) {
