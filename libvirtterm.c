@@ -14,6 +14,8 @@
     __typeof__ (b) _b = (b); \
     _a > _b ? _a : _b; })
 
+#define ACS_MIN 0x2b
+
 //
 // INPUT KEYS
 //
@@ -292,7 +294,6 @@ static void update_current_attrib(VT* vt, int arg)
             vt->current_attrib.italic = false;
             vt->current_attrib.fg_color = vt->config.default_fg_color;
             vt->current_attrib.bg_color = vt->config.default_bg_color;
-            vt->acs_mode = false;
             break;
         case 1: vt->current_attrib.bold = true; break;
         case 2: vt->current_attrib.dim = true; break;
@@ -384,7 +385,7 @@ static bool parse_escape_sequence(VT* vt)
 
     int len = strlen(vt->current_buffer);
     char last = vt->current_buffer[len - 1];
-    if (isalpha(last) || len >= sizeof vt->current_buffer) {  // absolute cursor position
+    if (isalpha(last) || len >= sizeof vt->current_buffer || strcmp(vt->current_buffer, "(0") == 0) {
         // printf("%s\n", vt->current_buffer);
 #define MATCH(pattern) (match(vt->current_buffer, pattern, args, &argn))
         if MATCH("[##H") {
@@ -427,7 +428,21 @@ static bool parse_escape_sequence(VT* vt)
 // ADD TEXT TO TERMINAL
 //
 
-static void add_char(VT* vt, char c, int* row, int* column)
+static uint8_t translate_acs_char(VT* vt, uint8_t c)
+{
+    const char* asc = vt->config.acs_chars.str;
+    if (c >= 0x2b && c <= 0x2f)
+        return asc[c - 0x2b];
+    if (c == '`' || c == 'a')
+        return asc[c - '`' + 4];
+    if (c == 'f' || c == 'g')
+        return asc[c - 'f' + 6];
+    if (c >= 'j' && c <= '~')
+        return asc[c - 'j' + 6];
+    return c;
+}
+
+static void add_char(VT* vt, uint8_t c, int* row, int* column)
 {
     *row = vt->cursor.row;
     *column = vt->cursor.column;
@@ -450,6 +465,8 @@ static void add_char(VT* vt, char c, int* row, int* column)
             vt->push_event(vt, &(VTEvent) { .type = VT_EVENT_BELL });
             break;
         default:
+            if (vt->acs_mode)
+                c = translate_acs_char(vt, c);
             vt->matrix[vt->cursor.row * vt->columns + vt->cursor.column] = (VTCell) {
                 .ch = c,
                 .attrib = vt->current_attrib,
@@ -563,3 +580,5 @@ int vt_translate_key(VT* vt, uint16_t key, bool shift, bool ctrl, char* output, 
 
     return 1;
 }
+
+// https://man7.org/linux/man-pages/man4/console_codes.4.html
