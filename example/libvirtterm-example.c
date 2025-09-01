@@ -14,7 +14,7 @@
 #include "../libvirtterm.h"
 #include "colors.h"
 
-// #define DEBUG 1
+#define DEBUG 1
 
 /* We will use this ren to draw into this window every frame. */
 static SDL_Window   *window = NULL;
@@ -31,6 +31,7 @@ static bool         play_beep = false;
 #define FONT_H 15
 #define ZOOM 1.f
 #define BORDER 16
+#define INPUT_BUFFER_SIZE 16*1024
 
 void vt_callback(VT* vt, VTEvent* e)
 {
@@ -241,7 +242,7 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     //
     // process PTY
     //
-    char buf[256];
+    char buf[INPUT_BUFFER_SIZE];
     int n = read(master_pty, buf, sizeof(buf));
     if (n == 0) {
         exit(0);

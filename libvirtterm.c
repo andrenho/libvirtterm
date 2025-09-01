@@ -26,7 +26,7 @@ typedef struct {
 } InputKey;
 
 static const InputKey vt_strings[] = {
-    { VT_ARROW_UP,    "\e[A "},
+    { VT_ARROW_UP,    "\e[A" },
     { VT_ARROW_DOWN,  "\e[B" },
     { VT_ARROW_RIGHT, "\e[C" },
     { VT_ARROW_LEFT,  "\e[D" },
@@ -186,6 +186,7 @@ static void clear_cells(VT* vt, int from, int to)
         int row = i / vt->columns;
         int column = i % vt->columns;
         vt->matrix[i].ch = ' ';
+        vt->matrix[i].attrib = vt->current_attrib;
         if (vt->config.update_events == VT_CELL_UPDATE)
             vt->push_event(vt, &(VTEvent) { .type = VT_EVENT_CELL_UPDATE, .cell = { .row = row, .column = column } });
         rows_updates[row] = true;
@@ -392,8 +393,12 @@ static bool parse_escape_sequence(VT* vt)
             vt->cursor.row = MAX(args[0] - 1, 0);
             vt->cursor.column = MAX(args[1] - 1, 0);
         }
-        else if MATCH("A") vt->cursor.row = MAX(vt->cursor.row - 1, 0);
-        else if MATCH("C") vt->cursor.row = MIN(vt->cursor.column + 1, vt->columns - 1);
+        else if MATCH("[#A") vt->cursor.row = MAX(vt->cursor.row - (args[0] ? args[0] : 1), 0);
+        else if MATCH("[#B") vt->cursor.row = MIN(vt->cursor.row + (args[0] ? args[0] : 1), vt->rows - 1);
+        else if MATCH("[#C") vt->cursor.column = MIN(vt->cursor.column + (args[0] ? args[0] : 1), vt->columns - 1);
+        else if MATCH("[#D") vt->cursor.column = MAX(vt->cursor.column - (args[0] ? args[0] : 1), 0);
+        else if MATCH("[#G") vt->cursor.column = args[0] + 1;
+        else if MATCH("[#d") vt->cursor.row = args[0] + 1;
         else if MATCH("[#J") escape_seq_clear_cells(vt, 'J', args[0]);
         else if MATCH("[#K") escape_seq_clear_cells(vt, 'K', args[0]);
         else if MATCH("M") {
@@ -407,10 +412,11 @@ static bool parse_escape_sequence(VT* vt)
             vt->cursor.column = 0;
             vt->cursor.row = 0;
         }
-        else if MATCH("[##m") {
+        else if MATCH("[###m") {
             update_current_attrib(vt, 0);
             for (int i = 0; i < argn; ++i)
-                update_current_attrib(vt, args[i]);
+                if (i == 0 || (i > 0 && args[i] != 0))
+                    update_current_attrib(vt, args[i]);
         }
         else if MATCH("(0") vt->acs_mode = true;
         else if MATCH("(B") vt->acs_mode = false;
@@ -440,19 +446,31 @@ static void add_char(VT* vt, uint8_t c, int* row, int* column)
     *row = vt->cursor.row;
     *column = vt->cursor.column;
 
+    if (c == '\r') {
+        vt->cursor.column = 0;
+        return;
+    }
+
+    if (vt->cursor.column == vt->columns) {
+        vt->cursor.column = 0;
+        ++vt->cursor.row;
+    }
+
+    if (vt->cursor.row == vt->scroll_area_bottom) {
+        scroll(vt, 1);
+        --vt->cursor.row;
+        vt->cursor.column = 0;
+    }
+
     switch (c) {
-        case 10:
+        case '\n':
             ++vt->cursor.row;
-            break;
-        case 13:
-            vt->cursor.column = 0;
             break;
         case '\b':
             vt->cursor.column = MAX(vt->cursor.column - 1, 0);
             break;
         case '\t':
-            for (int i = 0; i < 8; ++i)
-                add_char(vt, ' ', row, column);
+            vt->cursor.column = ((vt->cursor.column / 8) + 1) * 8;
             break;
         case 7:
             vt->push_event(vt, &(VTEvent) { .type = VT_EVENT_BELL });
@@ -465,17 +483,6 @@ static void add_char(VT* vt, uint8_t c, int* row, int* column)
                 .attrib = vt->current_attrib,
             };
             ++vt->cursor.column;
-    }
-
-    if (vt->cursor.column == vt->columns) {
-        vt->cursor.column = 0;
-        ++vt->cursor.row;
-    }
-
-    if (vt->cursor.row == vt->scroll_area_bottom) {
-        scroll(vt, 1);
-        --vt->cursor.row;
-        vt->cursor.column = 0;
     }
 }
 
@@ -520,7 +527,9 @@ VTCell vt_char(VT* vt, int row, int column)
 {
     VTCell ch = vt->matrix[row * vt->columns + column];
 
-    if (vt->cursor.visible && vt->cursor.row == row && vt->cursor.column == column && vt->config.automatic_cursor) {
+    if (vt->cursor.visible && vt->cursor.row == row && vt->config.automatic_cursor && (
+        vt->cursor.column == column || (column == vt->columns - 1 && vt->cursor.column == vt->columns)
+    )) {
         ch.attrib.bg_color = vt->config.cursor_color;
         ch.attrib.fg_color = vt->config.cursor_char_color;
     }
