@@ -430,15 +430,8 @@ static bool parse_escape_sequence(VT* vt)
 
 static uint8_t translate_acs_char(VT* vt, uint8_t c)
 {
-    const char* asc = vt->config.acs_chars.str;
-    if (c >= 0x2b && c <= 0x2f)
-        return asc[c - 0x2b];
-    if (c == '`' || c == 'a')
-        return asc[c - '`' + 4];
-    if (c == 'f' || c == 'g')
-        return asc[c - 'f' + 6];
-    if (c >= 'j' && c <= '~')
-        return asc[c - 'j' + 6];
+    if (c >= 0x60 && c <= 0x7e)
+        return vt->config.acs_chars[c - 0x60];
     return c;
 }
 

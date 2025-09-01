@@ -60,49 +60,6 @@ typedef enum VTColor {
     VT_BRIGHT_WHITE,
 } VTColor;
 
-//
-// ACS characters
-//
-
-typedef struct VTAcsCharacters {
-    union {
-        struct {
-            uint8_t right_arrow;
-            uint8_t left_arrow;
-            uint8_t up_arrow;
-            uint8_t down_arrow;
-            uint8_t block;
-            uint8_t diamond;
-            uint8_t checkerboard;
-            uint8_t degree;
-            uint8_t plus_minus;
-            uint8_t board;
-            uint8_t lower_right_corner;
-            uint8_t upper_right_corner;
-            uint8_t upper_left_corner;
-            uint8_t lower_left_corner;
-            uint8_t cross;
-            uint8_t scanline_1;
-            uint8_t scanline_3;
-            uint8_t horizontal_line;
-            uint8_t scanline_7;
-            uint8_t scanline_9;
-            uint8_t left_tee;
-            uint8_t right_tee;
-            uint8_t bottom_tee;
-            uint8_t top_tee;
-            uint8_t vertial_line;
-            uint8_t less_than_or_equal;
-            uint8_t greater_than_or_equal;
-            uint8_t pi;
-            uint8_t not_equal;
-            uint8_t pound_sterling;
-            uint8_t bullet;
-        } ch;
-        char str[32];
-    };
-} VTAcsCharacters;
-
 
 //
 // Config
@@ -120,7 +77,7 @@ typedef struct VTConfig {
     VTUpdateEvents   update_events;          // when a cell changes, send updates per cell, per line, or none at all
     VTScrollAction   on_scroll;              // how scrolls are reported back to the application
     bool             bold_is_bright;         // true = bold is also bright color
-    VTAcsCharacters  acs_chars;
+    char             acs_chars[32];          // see https://en.wikipedia.org/wiki/DEC_Special_Graphics (0x60 ~ 0x7e)
 } VTConfig;
 
 #define VT_DEFAULT_CONFIG (VTConfig) {      \
@@ -132,7 +89,7 @@ typedef struct VTConfig {
     .update_events = VT_NO_UPDATES,         \
     .on_scroll = VT_REFRESH,                \
     .bold_is_bright = true,                 \
-    .acs_chars = { .str = "><^v+#:o##+++++~---_++++|<>*!fo" } \
+    .acs_chars = "+#????o#??+++++~---_++++|<>*!fo" \
 }
 
 //

@@ -5,6 +5,9 @@
   - [x] Connect to shell
 - [ ] Terminal
   - [ ] Escape sequences
+    - [x] Basic formatting and positioning
+    - [ ] 
+  - [ ] Encoding
   - [ ] Blink
   - [ ] Mouse support
   - [ ] Check TODOs in the code
