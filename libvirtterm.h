@@ -74,7 +74,9 @@ typedef struct VTConfig {
     VTColor          cursor_char_color;
     bool             automatic_cursor;       // if true, control cursor from within libvirtterm, else sends cursor updates as events
     VTUpdateEvents   update_events;          // when a cell changes, send updates per cell, per line, or none at all
-    VTScrollAction on_scroll;
+    VTScrollAction   on_scroll;              // how scrolls are reported back to the application
+    bool             bold_is_bright;         // true = bold is also bright color
+    char             acs_chars[31];
 } VTConfig;
 
 #define VT_DEFAULT_CONFIG (VTConfig) {      \
@@ -85,6 +87,8 @@ typedef struct VTConfig {
     .automatic_cursor = true,               \
     .update_events = VT_NO_UPDATES,         \
     .on_scroll = VT_REFRESH,                \
+    .bold_is_bright = true                  \
+    .acs_chars = "><^v#+:o##+++++~---_++++|<>*!fo" \
 }
 
 //
@@ -97,8 +101,8 @@ typedef struct __attribute__((packed)) VTAttrib {
     bool underline   : 1;
     bool blink       : 1;   // automatically managed
     bool reverse     : 1;   //       "          "
-    bool invisible   : 1;   //       "          "
-    bool italic     : 1;
+    bool invisible   : 1;
+    bool italic      : 1;
     int  padding     : 1;
     VTColor bg_color : 4;
     VTColor fg_color : 4;
@@ -165,6 +169,7 @@ typedef struct VT {
     bool       buffer_mode;
     int        scroll_area_top;
     int        scroll_area_bottom;
+    bool       acs_mode;
     VTCell*    matrix;
 } VT;
 

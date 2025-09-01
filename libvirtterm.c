@@ -292,6 +292,7 @@ static void update_current_attrib(VT* vt, int arg)
             vt->current_attrib.italic = false;
             vt->current_attrib.fg_color = vt->config.default_fg_color;
             vt->current_attrib.bg_color = vt->config.default_bg_color;
+            vt->acs_mode = false;
             break;
         case 1: vt->current_attrib.bold = true; break;
         case 2: vt->current_attrib.dim = true; break;
@@ -330,6 +331,22 @@ static void update_current_attrib(VT* vt, int arg)
         case 46: vt->current_attrib.bg_color = VT_CYAN; break;
         case 47: vt->current_attrib.bg_color = VT_WHITE; break;
         case 49: vt->current_attrib.bg_color = vt->config.default_fg_color; break;
+        case 90: vt->current_attrib.fg_color = VT_BRIGHT_BLACK; break;
+        case 91: vt->current_attrib.fg_color = VT_BRIGHT_RED; break;
+        case 92: vt->current_attrib.fg_color = VT_BRIGHT_GREEN; break;
+        case 93: vt->current_attrib.fg_color = VT_BRIGHT_YELLOW; break;
+        case 94: vt->current_attrib.fg_color = VT_BRIGHT_BLUE; break;
+        case 95: vt->current_attrib.fg_color = VT_BRIGHT_MAGENTA; break;
+        case 96: vt->current_attrib.fg_color = VT_BRIGHT_CYAN; break;
+        case 97: vt->current_attrib.fg_color = VT_BRIGHT_WHITE; break;
+        case 100: vt->current_attrib.bg_color = VT_BRIGHT_BLACK; break;
+        case 101: vt->current_attrib.bg_color = VT_BRIGHT_RED; break;
+        case 102: vt->current_attrib.bg_color = VT_BRIGHT_GREEN; break;
+        case 103: vt->current_attrib.bg_color = VT_BRIGHT_YELLOW; break;
+        case 104: vt->current_attrib.bg_color = VT_BRIGHT_BLUE; break;
+        case 105: vt->current_attrib.bg_color = VT_BRIGHT_MAGENTA; break;
+        case 106: vt->current_attrib.bg_color = VT_BRIGHT_CYAN; break;
+        case 107: vt->current_attrib.bg_color = VT_BRIGHT_WHITE; break;
     }
 }
 
@@ -383,17 +400,19 @@ static bool parse_escape_sequence(VT* vt)
                 scroll(vt, -1);
             vt->cursor.row = MAX(vt->cursor.row - 1, 0);
         }
-        else if (MATCH("[##r") && args[0] <= args[1]) {
+        else if MATCH("[##r" && args[0] <= args[1]) {
             vt->scroll_area_top = args[0];
             vt->scroll_area_bottom = args[1];
             vt->cursor.column = 0;
             vt->cursor.row = 0;
         }
-        else if (MATCH("[##m")) {
+        else if MATCH("[##m") {
             update_current_attrib(vt, 0);
             for (int i = 0; i < argn; ++i)
                 update_current_attrib(vt, args[i]);
         }
+        else if MATCH("(0") vt->acs_mode = true;
+        else if MATCH("(B") vt->acs_mode = false;
         else if (MATCH("[?2004h") || MATCH("[?2004l")) /* TODO */ ;  // ignore for now
         else {
             fprintf(stderr, "Unknown escape sequence: ^[%s\n", vt->current_buffer);
@@ -490,10 +509,21 @@ void vt_write(VT* vt, const char* str, int str_sz)
 VTCell vt_char(VT* vt, int row, int column)
 {
     VTCell ch = vt->matrix[row * vt->columns + column];
+
     if (vt->cursor.visible && vt->cursor.row == row && vt->cursor.column == column && vt->config.automatic_cursor) {
         ch.attrib.bg_color = vt->config.cursor_color;
         ch.attrib.fg_color = vt->config.cursor_char_color;
     }
+
+    if (ch.attrib.bold && vt->config.bold_is_bright && ch.attrib.fg_color < 8)
+        ch.attrib.fg_color += 8;
+
+    if (ch.attrib.reverse) {
+        VTColor swp = ch.attrib.fg_color;
+        ch.attrib.fg_color = ch.attrib.bg_color;
+        ch.attrib.bg_color = swp;
+    }
+
     return ch;
 }
 

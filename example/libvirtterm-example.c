@@ -29,7 +29,7 @@ static bool         play_beep = false;
 
 #define FONT_W 8
 #define FONT_H 15
-#define ZOOM 2.f
+#define ZOOM 1.f
 #define BORDER 16
 
 void vt_callback(VT* vt, VTEvent* e)
@@ -207,10 +207,12 @@ static void draw_char(size_t row, size_t column)
         SDL_SetTextureColorMod(font, fg.r, fg.g, fg.b);
         SDL_RenderTexture(ren, font, &origin, &dest);
 
+        /*
         if (chr.attrib.bold) {
             dest.x += 1;
             SDL_RenderTexture(ren, font, &origin, &dest);
         }
+        */
 
         if (chr.attrib.underline) {
             SDL_FRect r = { dest.x, dest.y + ((FONT_H - 2) * ZOOM), dest.w, ZOOM };
