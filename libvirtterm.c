@@ -400,7 +400,7 @@ static bool parse_escape_sequence(VT* vt)
                 scroll(vt, -1);
             vt->cursor.row = MAX(vt->cursor.row - 1, 0);
         }
-        else if MATCH("[##r" && args[0] <= args[1]) {
+        else if (MATCH("[##r") && args[0] <= args[1]) {
             vt->scroll_area_top = args[0];
             vt->scroll_area_bottom = args[1];
             vt->cursor.column = 0;
