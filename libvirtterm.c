@@ -162,7 +162,12 @@ static void vt_cursor_tab(VT* vt)
 
 static void vt_scroll_based_on_cursor(VT* vt)
 {
-    // TODO
+    if (vt->cursor.column == vt->columns) {
+        vt->cursor.column = 0;
+        ++vt->cursor.row;
+    }
+
+    // TODO - scroll bottom
 }
 
 #pragma endregion
@@ -242,6 +247,10 @@ void vt_write(VT* vt, const char* str, size_t str_sz)
 {
     for (size_t i = 0; i < str_sz; ++i) {
         CHAR c = str[i];
+#ifdef VT_DEBUG_SUPPORT
+        if (vt->config.debug >= VT_ALL_BYTES)
+            printf("%c      %d  0x%02x\n", c >= 32 && c < 127 ? c : ' ', c, c);
+#endif
         if (!vt->esc_buffer[0])   // not parsing escape sequence
             vt_add_char(vt, c);
         else

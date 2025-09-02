@@ -70,6 +70,7 @@ typedef enum VTColor {
 
 typedef enum { VT_NO_UPDATES, VT_CELL_UPDATE, VT_ROW_UPDATE } VTUpdateEvents;
 typedef enum { VT_NOTIFY, VT_REFRESH } VTScrollAction;
+typedef enum { VT_NO_DEBUG, VT_ERRORS_ONLY, VT_ALL_SEQUENCES, VT_ALL_BYTES } VTDebug;
 
 typedef struct VTConfig {
     VTColor          default_fg_color;       // some default colors
@@ -81,6 +82,7 @@ typedef struct VTConfig {
     VTScrollAction   on_scroll;              // how scrolls are reported back to the application
     bool             bold_is_bright;         // true = bold is also bright color
     CHAR             acs_chars[32];          // see https://en.wikipedia.org/wiki/DEC_Special_Graphics (0x60 ~ 0x7e)
+    VTDebug          debug;
 } VTConfig;
 
 #define VT_DEFAULT_CONFIG (VTConfig) {      \
@@ -92,7 +94,8 @@ typedef struct VTConfig {
     .update_events = VT_NO_UPDATES,         \
     .on_scroll = VT_REFRESH,                \
     .bold_is_bright = true,                 \
-    .acs_chars = "+#????o#??+++++~---_++++|<>*!fo" \
+    .acs_chars = "+#????o#??+++++~---_++++|<>*!fo", \
+    .debug = VT_NO_DEBUG,                   \
 }
 
 //
