@@ -1,10 +1,12 @@
 Code organization:
   - Hide VT members
   - Header with control codes
+  - Central functions: control and send events
   - Central functions: memory functions within terminal
   - Central function: scroll to all sides
   - Central function: new character
     - State machine
+    - Control dirty characters / rows
   - Key translations
 
 
