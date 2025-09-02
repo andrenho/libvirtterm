@@ -236,6 +236,9 @@ static void vt_add_char(VT* vt, CHAR c)
         case CR:
             vt_cursor_to_bol(vt);
             break;
+        case LF:
+            vt_cursor_advance(vt, 1, 0);
+            break;
         case BACKSPACE:
             vt_cursor_advance(vt, 0, -1);
             break;
