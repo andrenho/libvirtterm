@@ -14,18 +14,18 @@
 #include "../libvirtterm.h"
 #include "colors.h"
 
-#define DEBUG 1
+// #define DEBUG 1
 
 /* We will use this ren to draw into this window every frame. */
-static SDL_Window   *window = NULL;
-static SDL_Renderer *ren = NULL;
-static SDL_AudioStream *stream = NULL;
-static Uint8 *wav_data = NULL;
-static Uint32 wav_data_len = 0;
-static SDL_Texture  *font = NULL;
-static VT           *vt = NULL;
-static int          master_pty = -1;
-static bool         play_beep = false;
+static SDL_Window*      window = NULL;
+static SDL_Renderer*    ren = NULL;
+static SDL_AudioStream* stream = NULL;
+static Uint8*           wav_data = NULL;
+static Uint32           wav_data_len = 0;
+static int              master_pty = -1;
+static bool             play_beep = false;
+static VT*              vt;
+static SDL_Texture*     font;
 
 #define FONT_W 8
 #define FONT_H 15

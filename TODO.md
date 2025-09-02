@@ -6,8 +6,8 @@
 - [ ] Terminal
   - [ ] Escape sequences
     - [x] Basic formatting and positioning
-    - [ ] 
   - [ ] Encoding
   - [ ] Blink
+  - [ ] Resize
   - [ ] Mouse support
   - [ ] Check TODOs in the code
