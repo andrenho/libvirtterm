@@ -5,6 +5,7 @@ Code organization:
   - Central function: scroll to all sides
   - Central function: new character
     - State machine
+  - Key translations
 
 
 -[x] Create sample application
