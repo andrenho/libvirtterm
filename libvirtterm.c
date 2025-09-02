@@ -88,6 +88,7 @@ void vt_free(VT* vt)
 {
     if (vt) {
         vt_free_event_queue(vt);
+        free(vt->rows_updated);
         free(vt->matrix);
     }
     free(vt);
