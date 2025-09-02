@@ -1,26 +1,38 @@
+TODO:
+  - [ ] Create testing infra
+  - [ ] Basic operation
+    - [ ] Report events
+    - [ ] Support for debugging
+  - [ ] Escape code parsing (state machine)
+  - [ ] Keypress support
+  - [ ] Basic special chars
+  - [ ] Functions/escape sequences controlling cursor movement
+  - [ ] Functions/escape sequences controlling scroll (including new line)
+  - [ ] Functions/escape sequences controlling color and formatting (including true color)
+    - [ ] Blinking
+  - [ ] Functions/escape sequences controlling alternate charsets
+  - [ ] Functions/escape sequences controlling save states
+  - [ ] Functions/escape sequences controlling mouse
+  - [ ] Resize support
+  - [ ] Functions/escape sequences for advanced xterm stuff
+  - [ ] Unicode support
+  - [ ] Selection support
+
+
 Code organization:
+  - Testing infrastructure
   - Hide VT members
   - Header with control codes
+  - Character set management
+  - State management
+  - Attribute management (including true-color)
   - Central functions: control and send events
   - Central functions: memory functions within terminal
-  - Central function: scroll to all sides
+  - Central function: scroll to all sides (consider scroll area)
+  - Central function: cursor movement
   - Central function: new character
     - State machine
     - Control dirty characters / rows
+    - Escape code parsing
   - Key translations
 
-
--[x] Create sample application
-  - [x] Load and manage font
-  - [x] Terminal framebuffer
-  - [x] Draw with colors and formatting
-  - [x] Connect to shell
-- [ ] Terminal
-  - [ ] Escape sequences
-    - [x] Basic formatting and positioning
-  - [ ] Add protections
-  - [ ] Encoding
-  - [ ] Blink
-  - [ ] Resize
-  - [ ] Mouse support
-  - [ ] Check TODOs in the code

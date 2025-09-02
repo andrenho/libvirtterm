@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#pragma region MIN/MAX
 #define MIN(a,b) \
     ({ __typeof__ (a) _a = (a); \
     __typeof__ (b) _b = (b); \
@@ -13,12 +14,144 @@
     ({ __typeof__ (a) _a = (a); \
     __typeof__ (b) _b = (b); \
     _a > _b ? _a : _b; })
+#pragma endregion
 
 #define ACS_MIN 0x2b
 
+typedef struct VT {
+    int        rows;
+    int        columns;
+    VTCursor   cursor;
+    VTConfig   config;
+    VTAttrib   current_attrib;
+    VTCallback push_event;
+    void*      data;
+    char       current_buffer[32];
+    int        scroll_area_top;
+    int        scroll_area_bottom;
+    bool       acs_mode;
+    VTCell*    matrix;
+} VT;
+
 //
-// INPUT KEYS
+// INITIALIZATION
 //
+
+#pragma region Initialization
+
+VT* vt_new(int rows, int columns, VTCallback callback, VTConfig const* config, void* data)
+{
+    VT* vt = calloc(1, sizeof(VT));
+    vt->rows = rows;
+    vt->columns = columns;
+    vt->cursor = (VTCursor) { .column = 0, .row = 0, .visible = true };
+    vt->config = *config;
+    vt->current_attrib = DEFAULT_ATTR;
+    vt->scroll_area_top = 1;
+    vt->scroll_area_bottom = vt->rows;
+    vt->push_event = callback;
+    vt->data = data;
+    memset(vt->current_buffer, 0, sizeof vt->current_buffer);
+    vt_resize(vt, rows, columns);
+    return vt;
+}
+
+void vt_free(VT* vt)
+{
+    if (vt)
+        free(vt->matrix);
+    free(vt);
+}
+
+void vt_reset(VT* vt)
+{
+    vt->cursor = (VTCursor) { .column = 0, .row = 0, .visible = true };
+    vt->current_attrib = DEFAULT_ATTR;
+    vt->scroll_area_top = 1;
+    vt->scroll_area_bottom = vt->rows;
+    for (int i = 0; i < vt->rows * vt->columns; ++i)
+        vt->matrix[i] = (VTCell) { .ch = ' ', .attrib = DEFAULT_ATTR };
+}
+
+void vt_resize(VT* vt, int rows, int columns)
+{
+    vt->rows = rows;
+    vt->columns = columns;
+
+    free(vt->matrix);
+
+    vt->matrix = malloc(sizeof(VTCell) * rows * columns);
+    for (int i = 0; i < rows * columns; ++i)
+        vt->matrix[i] = (VTCell) { .ch = ' ', .attrib = DEFAULT_ATTR };
+
+    // TODO - keep chars when resizing
+}
+
+#pragma endregion
+
+//
+// BASIC OPERATION
+//
+
+#pragma region Basic operation
+
+void vt_write(VT* vt, const char* str, int str_sz)
+{
+}
+
+#pragma endregion
+
+//
+// INFORMATION
+//
+
+#pragma region Information
+
+VTCell vt_char(VT* vt, int row, int column)
+{
+    VTCell ch = vt->matrix[row * vt->columns + column];
+
+    if (vt->cursor.visible && vt->cursor.row == row && vt->config.automatic_cursor && (
+        vt->cursor.column == column || (column == vt->columns - 1 && vt->cursor.column == vt->columns)
+    )) {
+        ch.attrib.bg_color = vt->config.cursor_color;
+        ch.attrib.fg_color = vt->config.cursor_char_color;
+    }
+
+    if (ch.attrib.bold && vt->config.bold_is_bright && ch.attrib.fg_color < 8)
+        ch.attrib.fg_color += 8;
+
+    if (ch.attrib.reverse) {
+        VTColor swp = ch.attrib.fg_color;
+        ch.attrib.fg_color = ch.attrib.bg_color;
+        ch.attrib.bg_color = swp;
+    }
+
+    return ch;
+}
+
+size_t vt_rows(VT* vt)
+{
+    return vt->rows;
+}
+
+size_t vt_columns(VT* vt)
+{
+    return vt->columns;
+}
+
+VTCursor vt_cursor(VT* vt)
+{
+    return vt->cursor;
+}
+
+#pragma endregion
+
+//
+// KEY TRANSLATION
+//
+
+#pragma region Key Translation
 
 typedef struct {
     VTKeys      key;
@@ -130,454 +263,6 @@ static const InputKey vt_strings_ctrl_shift[] = {
     { VT_F12,         "\e[24;6~" },
 };
 
-//
-// INITIALIZATION
-//
-
-VT* vt_new(int rows, int columns, VTCallback callback, VTConfig const* config, void* data)
-{
-    VT* vt = calloc(1, sizeof(VT));
-    vt->rows = rows;
-    vt->columns = columns;
-    vt->cursor = (VTCursor) { .column = 0, .row = 0, .visible = true };
-    vt->config = *config;
-    vt->current_attrib = DEFAULT_ATTR;
-    vt->scroll_area_top = 1;
-    vt->scroll_area_bottom = vt->rows;
-    vt->push_event = callback;
-    vt->data = data;
-    memset(vt->current_buffer, 0, sizeof vt->current_buffer);
-    vt->buffer_mode = false;
-    vt_resize(vt, rows, columns);
-    return vt;
-}
-
-void vt_free(VT* vt)
-{
-    if (vt)
-        free(vt->matrix);
-    free(vt);
-}
-
-//
-// TERMINAL MANIPULATION
-//
-
-void vt_resize(VT* vt, int rows, int columns)
-{
-    vt->rows = rows;
-    vt->columns = columns;
-
-    free(vt->matrix);
-
-    vt->matrix = malloc(sizeof(VTCell) * rows * columns);
-    for (int i = 0; i < rows * columns; ++i)
-        vt->matrix[i] = (VTCell) { .ch = ' ', .attrib = DEFAULT_ATTR };
-
-    // TODO - keep chars when resizing
-}
-
-static void clear_cells(VT* vt, int from, int to)
-{
-    bool rows_updates[vt->rows];
-    memset(rows_updates, 0, (sizeof rows_updates[0]) * vt->rows);
-
-    for (int i = from; i <= to; ++i) {
-        int row = i / vt->columns;
-        int column = i % vt->columns;
-        vt->matrix[i].ch = ' ';
-        vt->matrix[i].attrib = vt->current_attrib;
-        if (vt->config.update_events == VT_CELL_UPDATE)
-            vt->push_event(vt, &(VTEvent) { .type = VT_EVENT_CELL_UPDATE, .cell = { .row = row, .column = column } });
-        rows_updates[row] = true;
-    }
-
-    if (vt->config.update_events == VT_ROW_UPDATE) {
-        for (int i = 0; i < vt->rows; ++i)
-            if (rows_updates[i])
-                vt->push_event(vt, &(VTEvent) { .type = VT_EVENT_CELL_UPDATE, .row = { .row = i } });
-    }
-}
-
-static void scroll_row(VT* vt, int amount, int row)   // negative means scroll left
-{
-    if (row < 0 || row >= vt->rows)
-        return;
-
-    if (amount > 0) {
-        for (int column = vt->columns - 1; column > vt->cursor.column; --column) {
-            vt->matrix[row * vt->columns + column] = vt->matrix[row * vt->columns + column - 1];
-        }
-        vt->matrix[row * vt->columns + vt->cursor.column] = (VTCell) { ' ', vt->current_attrib };
-    } else if (amount < 0) {
-        for (int column = vt->cursor.column; column < vt->columns - 2 ; ++column) {
-            vt->matrix[row * vt->columns + column] = vt->matrix[row * vt->columns + column + 1];
-        }
-        vt->matrix[(row + 1) * vt->columns - 1] = (VTCell) { ' ', vt->current_attrib };
-    }
-
-    if (vt->config.update_events == VT_ROW_UPDATE)
-        vt->push_event(vt, &(VTEvent) { .type = VT_EVENT_CELL_UPDATE, .row = { .row = row } });
-}
-
-static void scroll_screen(VT* vt, int amount, int top_row, int bottom_row)   // negative amount means scroll down
-{
-    if (bottom_row < top_row)
-        return;
-
-    VTCell* m = vt->matrix;
-    VTCell* initial_cell = &m[top_row * vt->columns];
-    int cell_count = (bottom_row - top_row) * vt->columns;
-    int amount_cells = abs(amount * vt->columns);
-
-    if (amount > 0) {
-        // move cells
-        memmove(initial_cell, initial_cell + amount_cells, cell_count * sizeof(VTCell));
-
-        // clear cells
-        int initial_cell_to_blank = bottom_row * vt->columns;
-        clear_cells(vt, initial_cell_to_blank, initial_cell_to_blank + amount_cells - 1);
-
-    } else if (amount < 0) {
-        // move cells
-        memmove(initial_cell + amount_cells, initial_cell, cell_count * sizeof(VTCell));
-
-        // clear cells
-        int initial_cell_to_blank = top_row * vt->columns;
-        clear_cells(vt, initial_cell_to_blank, initial_cell_to_blank + amount_cells - 1);
-    }
-
-    if (vt->config.on_scroll == VT_NOTIFY) {
-        vt->push_event(vt, &(VTEvent) { .type = VT_EVENT_SCROLL_UP, .scroll = { .count = 1, .top_row = top_row, .bottom_row = bottom_row } });
-    } if (vt->config.update_events == VT_ROW_UPDATE) {
-        for (int row = top_row; row <= bottom_row; ++row)
-            vt->push_event(vt, &(VTEvent) { .type = VT_EVENT_ROW_UPDATE, .row = { .row = row } });
-    } else if (vt->config.update_events == VT_CELL_UPDATE) {
-        // TODO - only update the cells that actually changed
-        for (int row = top_row; row <= bottom_row; ++row) {
-            for (int column = 0; column < vt->columns; ++column) {
-                vt->push_event(vt, &(VTEvent) { .type = VT_EVENT_CELL_UPDATE, .cell = { .column = column, .row = row } });
-            }
-        }
-    }
-}
-
-//
-// PARSE ESCAPE SEQUENCES
-//
-
-static void escape_seq_clear_cells(VT* vt, char mode, int parameter)
-{
-    int cursor = vt->cursor.row * vt->columns + vt->cursor.column;
-
-    if (mode == 'J') {
-        int last_cell = vt->rows * vt->columns - 1;
-        switch (parameter) {
-            case 0:  // cursor to end of screen
-                clear_cells(vt, cursor, last_cell);
-                break;
-            case 1:  // start of screen to cursor
-                clear_cells(vt, 0, cursor);
-                break;
-            case 2:  // all screen
-                clear_cells(vt, 0, last_cell);
-                vt->push_event(vt, &(VTEvent) { .type = VT_EVENT_CLEAR_SCREEN });
-                break;
-            case 3:
-                break;
-            default:
-                fprintf(stderr, "Unsupported parameter for ESC[#J");
-        }
-    } else if (mode == 'K') {
-        int start_of_line = vt->cursor.row * vt->columns;
-        int end_of_line = (vt->cursor.row + 1) * vt->columns - 1;
-        switch (parameter) {
-            case 0:  // cursor to end of line
-                clear_cells(vt, cursor, end_of_line);
-                break;
-            case 1:  // start of line to cursor
-                clear_cells(vt, start_of_line, cursor);
-                break;
-            case 2:  // all line
-                clear_cells(vt, start_of_line, end_of_line);
-                break;
-            default:
-                fprintf(stderr, "Unsupported parameter for ESC[#K");
-        }
-    }
-}
-
-static void update_current_attrib(VT* vt, int arg)
-{
-    switch (arg) {
-        case 0:
-            vt->current_attrib.bold = false;
-            vt->current_attrib.dim = false;
-            vt->current_attrib.underline = false;
-            vt->current_attrib.blink = false;
-            vt->current_attrib.reverse = false;
-            vt->current_attrib.invisible = false;
-            vt->current_attrib.italic = false;
-            vt->current_attrib.fg_color = vt->config.default_fg_color;
-            vt->current_attrib.bg_color = vt->config.default_bg_color;
-            break;
-        case 1: vt->current_attrib.bold = true; break;
-        case 2: vt->current_attrib.dim = true; break;
-        case 3: vt->current_attrib.italic = true; break;
-        case 4: vt->current_attrib.underline = true; break;
-        case 5:
-        case 6:
-            vt->current_attrib.blink = true;
-            break;
-        case 7: vt->current_attrib.reverse = true; break;
-        case 8: vt->current_attrib.invisible = true; break;
-        case 22:
-            vt->current_attrib.bold = false;
-            vt->current_attrib.dim = false;
-            break;
-        case 23: vt->current_attrib.italic = false; break;
-        case 24: vt->current_attrib.underline = false; break;
-        case 25: vt->current_attrib.blink = false; break;
-        case 27: vt->current_attrib.reverse = false; break;
-        case 28: vt->current_attrib.invisible = false; break;
-        case 30: vt->current_attrib.fg_color = VT_BLACK; break;
-        case 31: vt->current_attrib.fg_color = VT_RED; break;
-        case 32: vt->current_attrib.fg_color = VT_GREEN; break;
-        case 33: vt->current_attrib.fg_color = VT_YELLOW; break;
-        case 34: vt->current_attrib.fg_color = VT_BLUE; break;
-        case 35: vt->current_attrib.fg_color = VT_MAGENTA; break;
-        case 36: vt->current_attrib.fg_color = VT_CYAN; break;
-        case 37: vt->current_attrib.fg_color = VT_WHITE; break;
-        case 39: vt->current_attrib.fg_color = vt->config.default_fg_color; break;
-        case 40: vt->current_attrib.bg_color = VT_BLACK; break;
-        case 41: vt->current_attrib.bg_color = VT_RED; break;
-        case 42: vt->current_attrib.bg_color = VT_GREEN; break;
-        case 43: vt->current_attrib.bg_color = VT_YELLOW; break;
-        case 44: vt->current_attrib.bg_color = VT_BLUE; break;
-        case 45: vt->current_attrib.bg_color = VT_MAGENTA; break;
-        case 46: vt->current_attrib.bg_color = VT_CYAN; break;
-        case 47: vt->current_attrib.bg_color = VT_WHITE; break;
-        case 49: vt->current_attrib.bg_color = vt->config.default_fg_color; break;
-        case 90: vt->current_attrib.fg_color = VT_BRIGHT_BLACK; break;
-        case 91: vt->current_attrib.fg_color = VT_BRIGHT_RED; break;
-        case 92: vt->current_attrib.fg_color = VT_BRIGHT_GREEN; break;
-        case 93: vt->current_attrib.fg_color = VT_BRIGHT_YELLOW; break;
-        case 94: vt->current_attrib.fg_color = VT_BRIGHT_BLUE; break;
-        case 95: vt->current_attrib.fg_color = VT_BRIGHT_MAGENTA; break;
-        case 96: vt->current_attrib.fg_color = VT_BRIGHT_CYAN; break;
-        case 97: vt->current_attrib.fg_color = VT_BRIGHT_WHITE; break;
-        case 100: vt->current_attrib.bg_color = VT_BRIGHT_BLACK; break;
-        case 101: vt->current_attrib.bg_color = VT_BRIGHT_RED; break;
-        case 102: vt->current_attrib.bg_color = VT_BRIGHT_GREEN; break;
-        case 103: vt->current_attrib.bg_color = VT_BRIGHT_YELLOW; break;
-        case 104: vt->current_attrib.bg_color = VT_BRIGHT_BLUE; break;
-        case 105: vt->current_attrib.bg_color = VT_BRIGHT_MAGENTA; break;
-        case 106: vt->current_attrib.bg_color = VT_BRIGHT_CYAN; break;
-        case 107: vt->current_attrib.bg_color = VT_BRIGHT_WHITE; break;
-    }
-}
-
-static bool match(const char* data, const char* pattern, int args[8], int* argn)
-{
-    int i = 0;
-
-    *argn = 0;
-    memset(args, 0, sizeof args[0] * 8);
-
-    if (data[strlen(data) - 1] != pattern[strlen(pattern) - 1])  // fail fast
-        return false;
-
-    for (const char* p = pattern; *p; ++p) {
-        while (data[i] == ';')
-            ++i;
-        if (*p == '#') {
-            char* endptr;
-            args[(*argn)++] = strtol(&data[i], &endptr, 10);
-            i = endptr - data;
-        } else if (*p != data[i] && data[i] != ';') {
-            return false;
-        } else {
-            ++i;
-        }
-    }
-
-    return i == strlen(data);
-}
-
-static bool parse_escape_sequence(VT* vt)
-{
-    int args[8] = {0};
-    int argn;
-
-    int len = strlen(vt->current_buffer);
-    char last = vt->current_buffer[len - 1];
-    if (isalpha(last) || last == '@' || len >= sizeof vt->current_buffer || strcmp(vt->current_buffer, "(0") == 0) {
-        // printf("%s\n", vt->current_buffer);
-#define MATCH(pattern) (match(vt->current_buffer, pattern, args, &argn))
-        if MATCH("[##H") {
-            vt->cursor.row = MAX(args[0] - 1, 0);
-            vt->cursor.column = MAX(args[1] - 1, 0);
-        }
-        else if MATCH("[#A") vt->cursor.row = MAX(vt->cursor.row - (args[0] ? args[0] : 1), 0);
-        else if MATCH("[#B") vt->cursor.row = MIN(vt->cursor.row + (args[0] ? args[0] : 1), vt->rows - 1);
-        else if MATCH("[#C") vt->cursor.column = MIN(vt->cursor.column + (args[0] ? args[0] : 1), vt->columns - 1);
-        else if MATCH("[#D") vt->cursor.column = MAX(vt->cursor.column - (args[0] ? args[0] : 1), 0);
-        else if MATCH("[#G") vt->cursor.column = args[0] + 1;
-        else if MATCH("[#d") vt->cursor.row = args[0] + 1;
-        else if MATCH("[#J") escape_seq_clear_cells(vt, 'J', args[0]);
-        else if MATCH("[#K") escape_seq_clear_cells(vt, 'K', args[0]);
-        else if MATCH("M") {
-            if (vt->cursor.row == 0)
-                scroll_screen(vt, -1, vt->scroll_area_top - 1, vt->scroll_area_bottom - 1);
-            vt->cursor.row = MAX(vt->cursor.row - 1, 0);
-        }
-        else if MATCH("[#L") {
-            scroll_screen(vt, args[0] ? -args[0] : -1, vt->cursor.row, vt->scroll_area_bottom - 1);
-        }
-        else if MATCH("[#M") {
-            scroll_screen(vt, args[0] ? args[0] : 1, vt->cursor.row, vt->scroll_area_bottom - 1);
-        }
-        else if (MATCH("[##r") && args[0] <= args[1]) {
-            vt->scroll_area_top = args[0];
-            vt->scroll_area_bottom = args[1];
-            vt->cursor.column = 0;
-            vt->cursor.row = 0;
-        }
-        else if MATCH("[###m") {
-            update_current_attrib(vt, 0);
-            for (int i = 0; i < argn; ++i)
-                if (i == 0 || (i > 0 && args[i] != 0))
-                    update_current_attrib(vt, args[i]);
-        }
-        else if MATCH("(0") vt->acs_mode = true;
-        else if MATCH("(B") vt->acs_mode = false;
-        else if MATCH("[#@") scroll_row(vt, (args[0] ? args[0] : 1), vt->cursor.row);
-        else if MATCH("[#P") scroll_row(vt, (args[0] ? -args[0] : -1), vt->cursor.row);
-        else if (MATCH("[?2004h") || MATCH("[?2004l")) /* TODO */ ;  // ignore for now
-        else {
-            fprintf(stderr, "Unknown escape sequence: ^[%s\n", vt->current_buffer);
-        }
-#undef MATCH
-        return true;
-    }
-    return false;
-}
-
-//
-// ADD TEXT TO TERMINAL
-//
-
-static uint8_t translate_acs_char(VT* vt, uint8_t c)
-{
-    if (c >= 0x60 && c <= 0x7e)
-        return vt->config.acs_chars[c - 0x60];
-    return c;
-}
-
-static void add_char(VT* vt, uint8_t c, int* row, int* column)
-{
-    *row = vt->cursor.row;
-    *column = vt->cursor.column;
-
-    if (c == '\r') {
-        vt->cursor.column = 0;
-        return;
-    }
-
-    if (vt->cursor.column == vt->columns) {
-        vt->cursor.column = 0;
-        ++vt->cursor.row;
-    }
-
-    if (vt->cursor.row == vt->scroll_area_bottom) {
-        scroll_screen(vt, 1, vt->scroll_area_top - 1, vt->scroll_area_bottom - 1);
-        --vt->cursor.row;
-        vt->cursor.column = 0;
-    }
-
-    switch (c) {
-        case '\n':
-            ++vt->cursor.row;
-            break;
-        case '\b':
-            vt->cursor.column = MAX(vt->cursor.column - 1, 0);
-            break;
-        case '\t':
-            vt->cursor.column = ((vt->cursor.column / 8) + 1) * 8;
-            break;
-        case 7:
-            vt->push_event(vt, &(VTEvent) { .type = VT_EVENT_BELL });
-            break;
-        default:
-            if (vt->acs_mode)
-                c = translate_acs_char(vt, c);
-            vt->matrix[vt->cursor.row * vt->columns + vt->cursor.column] = (VTCell) {
-                .ch = c,
-                .attrib = vt->current_attrib,
-            };
-            ++vt->cursor.column;
-    }
-}
-
-
-void vt_write(VT* vt, const char* str, int str_sz)
-{
-    bool rows_updates[vt->rows];
-    memset(rows_updates, 0, (sizeof rows_updates[0]) * vt->rows);
-
-    for (int i = 0; i < str_sz; ++i) {
-        if (vt->buffer_mode) {
-            vt->current_buffer[strlen(vt->current_buffer)] = str[i];
-            if (parse_escape_sequence(vt))
-                vt->buffer_mode = false;
-        } else {
-            if (str[i] == '\e') {
-                memset(vt->current_buffer, 0, sizeof vt->current_buffer);
-                vt->buffer_mode = true;
-            } else {  // show char in screen
-                int row, column;
-                add_char(vt, str[i], &row, &column);
-                rows_updates[row] = true;
-                if (vt->config.update_events == VT_CELL_UPDATE) {
-                    vt->push_event(vt, &(VTEvent) { .type = VT_EVENT_CELL_UPDATE, .cell = { row, column } });
-                }
-            }
-        }
-    }
-
-    if (vt->config.update_events == VT_ROW_UPDATE) {
-        for (int i = 0; i < vt->rows; ++i)
-            if (rows_updates[i])
-                vt->push_event(vt, &(VTEvent) { .type = VT_EVENT_CELL_UPDATE, .row = { .row = i } });
-    }
-}
-
-//
-// INFORMATION
-//
-
-VTCell vt_char(VT* vt, int row, int column)
-{
-    VTCell ch = vt->matrix[row * vt->columns + column];
-
-    if (vt->cursor.visible && vt->cursor.row == row && vt->config.automatic_cursor && (
-        vt->cursor.column == column || (column == vt->columns - 1 && vt->cursor.column == vt->columns)
-    )) {
-        ch.attrib.bg_color = vt->config.cursor_color;
-        ch.attrib.fg_color = vt->config.cursor_char_color;
-    }
-
-    if (ch.attrib.bold && vt->config.bold_is_bright && ch.attrib.fg_color < 8)
-        ch.attrib.fg_color += 8;
-
-    if (ch.attrib.reverse) {
-        VTColor swp = ch.attrib.fg_color;
-        ch.attrib.fg_color = ch.attrib.bg_color;
-        ch.attrib.bg_color = swp;
-    }
-
-    return ch;
-}
 
 int vt_translate_key(VT* vt, uint16_t key, bool shift, bool ctrl, char* output, int max_sz)
 {
@@ -592,7 +277,7 @@ int vt_translate_key(VT* vt, uint16_t key, bool shift, bool ctrl, char* output, 
 
 #define CHECK_KBD(SHIFT, CTRL, ARRAY) \
     if (SHIFT && CTRL) \
-        for (int i = 0; i < (sizeof ARRAY) / (sizeof ARRAY[0]); ++i) \
+        for (size_t i = 0; i < (sizeof ARRAY) / (sizeof ARRAY[0]); ++i) \
             if (key == ARRAY[i].key) \
                 return snprintf(output, max_sz, "%s", ARRAY[i].str);
 
@@ -615,5 +300,7 @@ int vt_translate_key(VT* vt, uint16_t key, bool shift, bool ctrl, char* output, 
 
     return 1;
 }
+
+#pragma endregion
 
 // https://man7.org/linux/man-pages/man4/console_codes.4.html

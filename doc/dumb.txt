@@ -1,0 +1,8 @@
+#	Reconstructed via infocmp from file: /usr/share/terminfo/64/dumb
+dumb|80-column dumb tty,
+	auto_right_margin,
+	columns#80,
+	bell=^G,
+	carriage_return=^M,
+	cursor_down=^J,
+	scroll_forward=^J,

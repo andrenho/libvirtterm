@@ -104,19 +104,15 @@ typedef struct __attribute__((packed)) VTAttrib {
     bool reverse     : 1;   //       "          "
     bool invisible   : 1;
     bool italic      : 1;
-    bool dirty       : 1;
-    // TODO - add charset
+    int  padding     : 1;
     VTColor bg_color : 4;
     VTColor fg_color : 4;
 } VTAttrib;
 
-#define DEFAULT_ATTR ((VTAttrib) { \
-    .bold = false, .dim = false, .underline = false, .blink = false, .reverse = false, .invisible = false, .italic = false, .dirty = false,\
-    .bg_color = vt->config.default_bg_color, .fg_color = vt->config.default_fg_color \
-})
+#define DEFAULT_ATTR ((VTAttrib) { .bold = false, .dim = false, .underline = false, .blink = false, .reverse = false, .invisible = false, .bg_color = vt->config.default_bg_color, .fg_color = vt->config.default_fg_color })
 
 typedef struct __attribute__((packed)) VTCell {
-    char     ch;
+    uint8_t  ch;
     VTAttrib attrib;
 } VTCell;
 
@@ -163,6 +159,22 @@ typedef struct VTCursor {
     int    column;
 } VTCursor;
 
+typedef struct VT {
+    int        rows;
+    int        columns;
+    VTCursor   cursor;
+    VTConfig   config;
+    VTAttrib   current_attrib;
+    VTCallback push_event;
+    void*      data;
+    char       current_buffer[32];
+    bool       buffer_mode;
+    int        scroll_area_top;
+    int        scroll_area_bottom;
+    bool       acs_mode;
+    VTCell*    matrix;
+} VT;
+
 //
 // Functions
 //
@@ -170,17 +182,10 @@ typedef struct VTCursor {
 VT*  vt_new(int rows, int columns, VTCallback callback, VTConfig const* config, void* data);
 void vt_free(VT* vt);
 
-void vt_reset(VT* vt);
-
 VTCell vt_char(VT* vt, int row, int column);
 
 void vt_resize(VT* vt, int rows, int columns);
 void vt_write(VT* vt, const char* str, int str_sz);
 int  vt_translate_key(VT* vt, uint16_t key, bool shift, bool ctrl, char* output, int max_sz);
-
-VTCursor vt_cursor(VT* vt);
-
-size_t vt_rows(VT* vt);
-size_t vt_columns(VT* vt);
 
 #endif

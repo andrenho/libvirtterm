@@ -1,5 +1,9 @@
 #define _XOPEN_SOURCE 600
-#include <pty.h>
+#ifdef __APPLE__
+# include <util.h>
+#else
+# include <pty.h>
+#endif
 #include <unistd.h>
 #include <fcntl.h>
 #include <utmp.h>
@@ -107,7 +111,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     // open shell
     //
     char pty_name[1024];
-    struct winsize ws = { vt->rows, vt->columns, w - (BORDER * 2), h - (BORDER * 2) };
+    struct winsize ws = { vt_rows(vt), vt_columns(vt), w - (BORDER * 2), h - (BORDER * 2) };
     pid_t pid = forkpty(&master_pty, pty_name, NULL, &ws);
     if (pid == 0) {
         setenv("LC_ALL", "en_US.ISO-8859-1", 1);
@@ -261,8 +265,8 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     SDL_SetRenderDrawColor(ren, 0, 0, 0, SDL_ALPHA_OPAQUE);
     SDL_RenderClear(ren);
 
-    for (size_t row = 0; row < vt->rows; ++row) {
-        for (size_t column = 0; column < vt->columns; ++column) {
+    for (size_t row = 0; row < vt_rows(vt); ++row) {
+        for (size_t column = 0; column < vt_columns(vt); ++column) {
             draw_char(row, column);
         }
     }
