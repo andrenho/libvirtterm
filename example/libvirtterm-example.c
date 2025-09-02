@@ -15,6 +15,7 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 
+#define VT_DEBUG_SUPPORT 1
 #include "../libvirtterm.h"
 #include "colors.h"
 
@@ -33,7 +34,7 @@ static SDL_Texture*     font;
 
 #define FONT_W 8
 #define FONT_H 15
-#define ZOOM 1.f
+#define ZOOM 2.f
 #define BORDER 16
 #define INPUT_BUFFER_SIZE 16*1024
 
@@ -105,6 +106,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     int w, h;
     SDL_GetWindowSize(window, &w, &h);
     VTConfig config = VT_DEFAULT_CONFIG;
+    config.debug = VT_DEBUG_ALL_BYTES;
     vt = vt_new((h - BORDER*2) / FONT_H / ZOOM, (w - BORDER*2) / FONT_W / ZOOM, vt_callback, &config, NULL);
 
     //
@@ -114,7 +116,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     struct winsize ws = { vt_rows(vt), vt_columns(vt), w - (BORDER * 2), h - (BORDER * 2) };
     pid_t pid = forkpty(&master_pty, pty_name, NULL, &ws);
     if (pid == 0) {
-        setenv("LC_ALL", "en_US.ISO-8859-1", 1);
+        // setenv("LC_ALL", "en_US.ISO-8859-1", 1);
         setenv("TERM", "xterm", 1);
         char *shell_path = getenv("SHELL");
         if (shell_path)

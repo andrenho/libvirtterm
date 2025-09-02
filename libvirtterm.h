@@ -70,7 +70,7 @@ typedef enum VTColor {
 
 typedef enum { VT_NO_UPDATES, VT_CELL_UPDATE, VT_ROW_UPDATE } VTUpdateEvents;
 typedef enum { VT_NOTIFY, VT_REFRESH } VTScrollAction;
-typedef enum { VT_NO_DEBUG, VT_ERRORS_ONLY, VT_ALL_SEQUENCES, VT_ALL_BYTES } VTDebug;
+typedef enum { VT_NO_DEBUG, VT_DEBUG_ERRORS_ONLY, VT_DEBUG_ALL_SEQUENCES, VT_DEBUG_ALL_BYTES } VTDebug;
 
 typedef struct VTConfig {
     VTColor          default_fg_color;       // some default colors

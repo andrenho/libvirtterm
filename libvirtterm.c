@@ -256,7 +256,7 @@ void vt_write(VT* vt, const char* str, size_t str_sz)
     for (size_t i = 0; i < str_sz; ++i) {
         CHAR c = str[i];
 #ifdef VT_DEBUG_SUPPORT
-        if (vt->config.debug >= VT_ALL_BYTES)
+        if (vt->config.debug >= VT_DEBUG_ALL_BYTES)
             printf("%c      %d  0x%02x\n", c >= 32 && c < 127 ? c : ' ', c, c);
 #endif
         if (!vt->esc_buffer[0])   // not parsing escape sequence

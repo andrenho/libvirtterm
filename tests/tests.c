@@ -24,7 +24,7 @@ int main()
 {
     VTConfig config = VT_DEFAULT_CONFIG;
     config.update_events = VT_CELL_UPDATE;
-    config.debug = VT_ALL_BYTES;
+    config.debug = VT_DEBUG_ALL_BYTES;
     VT* vt = vt_new(20, 10, callback, &config, NULL);
 
     // add single character
