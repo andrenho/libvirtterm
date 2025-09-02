@@ -24,9 +24,6 @@ typedef struct VT {
     INT        rows;
     INT        columns;
     VTConfig   config;
-
-    // user provided pointers
-    VTCallback push_event;
     void*      data;
 
     // terminal state
@@ -40,6 +37,10 @@ typedef struct VT {
     // escape sequence parsing
     char       esc_buffer[32];
     bool*      rows_updated;
+
+    // events
+    VTEvent*   event_queue_start;
+    VTEvent*   event_queue_end;
 } VT;
 
 //
@@ -63,7 +64,7 @@ typedef struct VT {
 
 #pragma region Initialization
 
-VT* vt_new(INT rows, INT columns, VTCallback callback, VTConfig const* config, void* data)
+VT* vt_new(INT rows, INT columns, VTConfig const* config, void* data)
 {
     VT* vt = calloc(1, sizeof(VT));
     vt->rows = rows;
@@ -73,17 +74,22 @@ VT* vt_new(INT rows, INT columns, VTCallback callback, VTConfig const* config, v
     vt->current_attrib = DEFAULT_ATTR;
     vt->scroll_area_top = 1;
     vt->scroll_area_bottom = vt->rows;
-    vt->push_event = callback;
+    vt->event_queue_start = NULL;
+    vt->event_queue_end = NULL;
     vt->data = data;
     memset(vt->esc_buffer, 0, sizeof vt->esc_buffer);
     vt_resize(vt, rows, columns);
     return vt;
 }
 
+static void vt_free_event_queue(VT*);
+
 void vt_free(VT* vt)
 {
-    if (vt)
+    if (vt) {
+        vt_free_event_queue(vt);
         free(vt->matrix);
+    }
     free(vt);
 }
 
@@ -115,6 +121,50 @@ void vt_resize(VT* vt, INT rows, INT columns)
 #pragma endregion
 
 //
+// EVENTS
+//
+
+#pragma region Events
+
+static void vt_add_event(VT* vt, VTEvent* event)
+{
+    VTEvent* new_event = malloc(sizeof(VTEvent));
+    memcpy(new_event, event, sizeof(VTEvent));
+
+    new_event->_next = NULL;
+    if (vt->event_queue_start == NULL)
+        vt->event_queue_start = new_event;
+    if (vt->event_queue_end)
+        vt->event_queue_end->_next = new_event;
+    vt->event_queue_end = new_event;
+}
+
+bool vt_next_event(VT* vt, VTEvent* e)
+{
+    if (vt->event_queue_start == NULL)
+        return false;
+
+    VTEvent* event_to_remove = vt->event_queue_start;
+    if (e)
+        memcpy(e, event_to_remove, sizeof(VTEvent));
+    vt->event_queue_start = event_to_remove->_next;
+
+    if (vt->event_queue_start == NULL)
+        vt->event_queue_end = NULL;
+
+    free(event_to_remove);
+
+    return true;
+}
+
+static void vt_free_event_queue(VT* vt)
+{
+    while (vt_next_event(vt, NULL));
+}
+
+#pragma endregion
+
+//
 // UPDATES TO TERMINAL MATRIX
 //
 
@@ -132,7 +182,7 @@ static void vt_set_ch(VT* vt, INT row, INT column, CHAR c)
     if (vt->config.update_events == VT_ROW_UPDATE)
         vt->rows_updated[row] = true;
     else if (vt->config.update_events == VT_CELL_UPDATE)
-        vt->push_event(vt, &(VTEvent) { .type = VT_EVENT_CELL_UPDATE, .cell = { .row = row, .column = column } });
+        vt_add_event(vt, &(VTEvent) { .type = VT_EVENT_CELL_UPDATE, .cell = { .row = row, .column = column } });
 }
 
 #pragma endregion
@@ -246,7 +296,7 @@ static void vt_add_char(VT* vt, CHAR c)
             vt_cursor_tab(vt);
             break;
         case BELL:
-            vt->push_event(vt, &(VTEvent) { .type = VT_EVENT_BELL });
+            vt_add_event(vt, &(VTEvent) { .type = VT_EVENT_BELL });
             break;
         default:
             vt_add_regular_char(vt, c);
@@ -272,7 +322,7 @@ void vt_write(VT* vt, const char* str, size_t str_sz)
     if (vt->config.update_events == VT_ROW_UPDATE)
         for (INT row = 0; row < vt->rows; ++row)
             if (vt->rows_updated[row])
-                vt->push_event(vt, &(VTEvent) { .type = VT_EVENT_ROW_UPDATE, .row = row });
+                vt_add_event(vt, &(VTEvent) { .type = VT_EVENT_ROW_UPDATE, .row = row });
     memset(vt->rows_updated, 0, vt->rows);
 }
 

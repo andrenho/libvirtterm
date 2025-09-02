@@ -153,6 +153,7 @@ typedef struct VTEvent {
             int bottom_row;
         } scroll;
     };
+    struct VTEvent* _next;
 } VTEvent;
 
 //
@@ -160,7 +161,6 @@ typedef struct VTEvent {
 //
 
 typedef struct VT VT;
-typedef void (*VTCallback)(VT* vt, VTEvent* e);
 
 typedef struct VTCursor {
     bool   visible;
@@ -172,7 +172,7 @@ typedef struct VTCursor {
 // Functions
 //
 
-VT*  vt_new(INT rows, INT columns, VTCallback callback, VTConfig const* config, void* data);
+VT*  vt_new(INT rows, INT columns, VTConfig const* config, void* data);
 void vt_free(VT* vt);
 
 void vt_reset(VT* vt);
@@ -182,6 +182,8 @@ VTCell vt_char(VT* vt, INT row, INT column);
 void vt_resize(VT* vt, INT rows, INT columns);
 void vt_write(VT* vt, const char* str, size_t str_sz);
 int  vt_translate_key(VT* vt, uint16_t key, bool shift, bool ctrl, char* output, size_t max_sz);
+
+bool vt_next_event(VT* vt, VTEvent* e);
 
 #define CURSOR_NOT_VISIBLE -1
 VTCursor vt_cursor(VT* vt);
