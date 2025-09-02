@@ -39,6 +39,7 @@ typedef struct VT {
 
     // escape sequence parsing
     char       esc_buffer[32];
+    bool*      rows_updated;
 } VT;
 
 //
@@ -104,6 +105,7 @@ void vt_resize(VT* vt, INT rows, INT columns)
     free(vt->matrix);
 
     vt->matrix = malloc(sizeof(VTCell) * rows * columns);
+    vt->rows_updated = calloc(sizeof(bool), rows);
     for (int i = 0; i < rows * columns; ++i)
         vt->matrix[i] = (VTCell) { .ch = ' ', .attrib = DEFAULT_ATTR };
 
@@ -126,6 +128,11 @@ static void vt_set_ch(VT* vt, INT row, INT column, CHAR c)
         .ch = c,
         .attrib = vt->current_attrib,
     };
+
+    if (vt->config.update_events == VT_ROW_UPDATE)
+        vt->rows_updated[row] = true;
+    else if (vt->config.update_events == VT_CELL_UPDATE)
+        vt->push_event(vt, &(VTEvent) { .type = VT_EVENT_CELL_UPDATE, .cell = { .row = row, .column = column } });
 }
 
 #pragma endregion
@@ -245,6 +252,7 @@ static void vt_add_char(VT* vt, CHAR c)
 
 void vt_write(VT* vt, const char* str, size_t str_sz)
 {
+    // parse characters
     for (size_t i = 0; i < str_sz; ++i) {
         CHAR c = str[i];
 #ifdef VT_DEBUG_SUPPORT
@@ -256,6 +264,13 @@ void vt_write(VT* vt, const char* str, size_t str_sz)
         else
             vt_add_escape_char(vt, c);
     }
+
+    // send row events
+    if (vt->config.update_events == VT_ROW_UPDATE)
+        for (INT row = 0; row < vt->rows; ++row)
+            if (vt->rows_updated[row])
+                vt->push_event(vt, &(VTEvent) { .type = VT_EVENT_ROW_UPDATE, .row = row });
+    memset(vt->rows_updated, 0, vt->rows);
 }
 
 #pragma endregion

@@ -145,9 +145,7 @@ typedef struct VTEvent {
             int row;
             int column;
         } cell;
-        struct {
-            int row;
-        } row;
+        int row;
         struct {
             int count;
             int top_row;
