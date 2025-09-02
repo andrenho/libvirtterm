@@ -6,6 +6,7 @@
 - [ ] Terminal
   - [ ] Escape sequences
     - [x] Basic formatting and positioning
+  - [ ] Add protections
   - [ ] Encoding
   - [ ] Blink
   - [ ] Resize

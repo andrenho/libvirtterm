@@ -121,6 +121,7 @@ typedef struct __attribute__((packed)) VTCell {
 //
 
 typedef enum VTEventType {
+    VT_EVENT_CLEAR_SCREEN,
     VT_EVENT_CELL_UPDATE,
     VT_EVENT_ROW_UPDATE,
     VT_EVENT_SCROLL_UP,

@@ -199,7 +199,28 @@ static void clear_cells(VT* vt, int from, int to)
     }
 }
 
-static void scroll(VT* vt, int amount, int top_row, int bottom_row)   // negative amount means scroll down
+static void scroll_row(VT* vt, int amount, int row)   // negative means scroll left
+{
+    if (row < 0 || row >= vt->rows)
+        return;
+
+    if (amount > 0) {
+        for (int column = vt->columns - 1; column > vt->cursor.column; --column) {
+            vt->matrix[row * vt->columns + column] = vt->matrix[row * vt->columns + column - 1];
+        }
+        vt->matrix[row * vt->columns + vt->cursor.column] = (VTCell) { ' ', vt->current_attrib };
+    } else if (amount < 0) {
+        for (int column = vt->cursor.column; column < vt->columns - 2 ; ++column) {
+            vt->matrix[row * vt->columns + column] = vt->matrix[row * vt->columns + column + 1];
+        }
+        vt->matrix[(row + 1) * vt->columns - 1] = (VTCell) { ' ', vt->current_attrib };
+    }
+
+    if (vt->config.update_events == VT_ROW_UPDATE)
+        vt->push_event(vt, &(VTEvent) { .type = VT_EVENT_CELL_UPDATE, .row = { .row = row } });
+}
+
+static void scroll_screen(VT* vt, int amount, int top_row, int bottom_row)   // negative amount means scroll down
 {
     if (bottom_row < top_row)
         return;
@@ -260,6 +281,7 @@ static void escape_seq_clear_cells(VT* vt, char mode, int parameter)
                 break;
             case 2:  // all screen
                 clear_cells(vt, 0, last_cell);
+                vt->push_event(vt, &(VTEvent) { .type = VT_EVENT_CLEAR_SCREEN });
                 break;
             case 3:
                 break;
@@ -270,13 +292,13 @@ static void escape_seq_clear_cells(VT* vt, char mode, int parameter)
         int start_of_line = vt->cursor.row * vt->columns;
         int end_of_line = (vt->cursor.row + 1) * vt->columns - 1;
         switch (parameter) {
-            case 0:  // cursor to end of screen
+            case 0:  // cursor to end of line
                 clear_cells(vt, cursor, end_of_line);
                 break;
-            case 1:  // start of screen to cursor
+            case 1:  // start of line to cursor
                 clear_cells(vt, start_of_line, cursor);
                 break;
-            case 2:  // all screen
+            case 2:  // all line
                 clear_cells(vt, start_of_line, end_of_line);
                 break;
             default:
@@ -389,7 +411,7 @@ static bool parse_escape_sequence(VT* vt)
 
     int len = strlen(vt->current_buffer);
     char last = vt->current_buffer[len - 1];
-    if (isalpha(last) || len >= sizeof vt->current_buffer || strcmp(vt->current_buffer, "(0") == 0) {
+    if (isalpha(last) || last == '@' || len >= sizeof vt->current_buffer || strcmp(vt->current_buffer, "(0") == 0) {
         // printf("%s\n", vt->current_buffer);
 #define MATCH(pattern) (match(vt->current_buffer, pattern, args, &argn))
         if MATCH("[##H") {
@@ -406,14 +428,14 @@ static bool parse_escape_sequence(VT* vt)
         else if MATCH("[#K") escape_seq_clear_cells(vt, 'K', args[0]);
         else if MATCH("M") {
             if (vt->cursor.row == 0)
-                scroll(vt, -1, vt->scroll_area_top - 1, vt->scroll_area_bottom - 1);
+                scroll_screen(vt, -1, vt->scroll_area_top - 1, vt->scroll_area_bottom - 1);
             vt->cursor.row = MAX(vt->cursor.row - 1, 0);
         }
         else if MATCH("[#L") {
-            scroll(vt, args[0] ? -args[0] : -1, vt->cursor.row, vt->scroll_area_bottom - 1);
+            scroll_screen(vt, args[0] ? -args[0] : -1, vt->cursor.row, vt->scroll_area_bottom - 1);
         }
         else if MATCH("[#M") {
-            scroll(vt, args[0] ? args[0] : 1, vt->cursor.row, vt->scroll_area_bottom - 1);
+            scroll_screen(vt, args[0] ? args[0] : 1, vt->cursor.row, vt->scroll_area_bottom - 1);
         }
         else if (MATCH("[##r") && args[0] <= args[1]) {
             vt->scroll_area_top = args[0];
@@ -429,6 +451,8 @@ static bool parse_escape_sequence(VT* vt)
         }
         else if MATCH("(0") vt->acs_mode = true;
         else if MATCH("(B") vt->acs_mode = false;
+        else if MATCH("[#@") scroll_row(vt, (args[0] ? args[0] : 1), vt->cursor.row);
+        else if MATCH("[#P") scroll_row(vt, (args[0] ? -args[0] : -1), vt->cursor.row);
         else if (MATCH("[?2004h") || MATCH("[?2004l")) /* TODO */ ;  // ignore for now
         else {
             fprintf(stderr, "Unknown escape sequence: ^[%s\n", vt->current_buffer);
@@ -466,7 +490,7 @@ static void add_char(VT* vt, uint8_t c, int* row, int* column)
     }
 
     if (vt->cursor.row == vt->scroll_area_bottom) {
-        scroll(vt, 1, vt->scroll_area_top - 1, vt->scroll_area_bottom - 1);
+        scroll_screen(vt, 1, vt->scroll_area_top - 1, vt->scroll_area_bottom - 1);
         --vt->cursor.row;
         vt->cursor.column = 0;
     }
