@@ -3,6 +3,7 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 
 #pragma region MIN/MAX
@@ -19,19 +20,41 @@
 #define ACS_MIN 0x2b
 
 typedef struct VT {
-    int        rows;
-    int        columns;
-    VTCursor   cursor;
+    // terminal configuration
+    INT        rows;
+    INT        columns;
     VTConfig   config;
-    VTAttrib   current_attrib;
+
+    // user provided pointers
     VTCallback push_event;
     void*      data;
-    char       current_buffer[32];
-    int        scroll_area_top;
-    int        scroll_area_bottom;
-    bool       acs_mode;
+
+    // terminal state
     VTCell*    matrix;
+    VTCursor   cursor;
+    VTAttrib   current_attrib;
+    INT        scroll_area_top;
+    INT        scroll_area_bottom;
+    bool       acs_mode;
+
+    // escape sequence parsing
+    char       esc_buffer[32];
 } VT;
+
+//
+// TERMINAL CAPABILITIES
+//
+
+#pragma region Terminal Capabilities
+
+// special characters
+#define BELL        7
+#define BACKSPACE   '\b'
+#define CR          '\r'
+#define LF          '\n'
+#define TAB         '\t'
+
+#pragma endregion
 
 //
 // INITIALIZATION
@@ -39,7 +62,7 @@ typedef struct VT {
 
 #pragma region Initialization
 
-VT* vt_new(int rows, int columns, VTCallback callback, VTConfig const* config, void* data)
+VT* vt_new(INT rows, INT columns, VTCallback callback, VTConfig const* config, void* data)
 {
     VT* vt = calloc(1, sizeof(VT));
     vt->rows = rows;
@@ -51,7 +74,7 @@ VT* vt_new(int rows, int columns, VTCallback callback, VTConfig const* config, v
     vt->scroll_area_bottom = vt->rows;
     vt->push_event = callback;
     vt->data = data;
-    memset(vt->current_buffer, 0, sizeof vt->current_buffer);
+    memset(vt->esc_buffer, 0, sizeof vt->esc_buffer);
     vt_resize(vt, rows, columns);
     return vt;
 }
@@ -73,7 +96,7 @@ void vt_reset(VT* vt)
         vt->matrix[i] = (VTCell) { .ch = ' ', .attrib = DEFAULT_ATTR };
 }
 
-void vt_resize(VT* vt, int rows, int columns)
+void vt_resize(VT* vt, INT rows, INT columns)
 {
     vt->rows = rows;
     vt->columns = columns;
@@ -90,13 +113,140 @@ void vt_resize(VT* vt, int rows, int columns)
 #pragma endregion
 
 //
+// UPDATES TO TERMINAL MATRIX
+//
+
+#pragma region Updates to Terminal Matrix
+
+static void vt_set_ch(VT* vt, INT row, INT column, CHAR c)
+{
+    row = MAX(MIN(row, vt->rows - 1), 0);
+    column = MAX(MIN(column, vt->columns - 1), 0);
+    vt->matrix[row * vt->columns + column] = (VTCell) {
+        .ch = c,
+        .attrib = vt->current_attrib,
+    };
+}
+
+#pragma endregion
+
+//
+// CURSOR MOVEMENT
+//
+
+#pragma region Cursor Movement
+
+static void vt_cursor_advance(VT* vt, int rows, int columns)
+{
+    vt->cursor.row += rows;
+    vt->cursor.column += columns;
+}
+
+static void vt_cursor_to_bol(VT* vt)
+{
+    vt->cursor.column = 0;
+}
+
+static void vt_cursor_tab(VT* vt)
+{
+    vt->cursor.column = ((vt->cursor.column / 8) + 1) * 8;
+}
+
+#pragma endregion
+
+//
+// SCROLLING
+//
+
+#pragma region Scrolling
+
+static void vt_scroll_based_on_cursor(VT* vt)
+{
+    // TODO
+}
+
+#pragma endregion
+
+//
+// ESCAPE SEQUENCES
+//
+
+#pragma region Escape Sequences
+
+static void start_escape_seq(VT* vt, char c)
+{
+    // TODO
+}
+
+static bool parse_escape_seq(VT* vt)
+{
+    // TODO
+    return false;
+}
+
+static void end_escape_seq(VT* vt)
+{
+    // TODO
+}
+
+static void vt_add_escape_char(VT* vt, char c)
+{
+    size_t len = strlen(vt->esc_buffer);
+    if (len == sizeof vt->esc_buffer - 1) {
+        end_escape_seq(vt);
+        return;
+    }
+
+    vt->esc_buffer[len] = c;
+
+    if (parse_escape_seq(vt))
+        end_escape_seq(vt);
+}
+
+#pragma endregion
+
+//
 // BASIC OPERATION
 //
 
 #pragma region Basic operation
 
-void vt_write(VT* vt, const char* str, int str_sz)
+static void vt_add_regular_char(VT* vt, CHAR c)
 {
+    vt_scroll_based_on_cursor(vt);
+    vt_set_ch(vt, vt->cursor.row, vt->cursor.column, c);
+    vt_cursor_advance(vt, 0, 1);
+}
+
+static void vt_add_char(VT* vt, CHAR c)
+{
+    switch (c) {
+        case CR:
+            vt_cursor_to_bol(vt);
+            break;
+        case BACKSPACE:
+            vt_cursor_advance(vt, 0, -1);
+            break;
+        case TAB:
+            vt_cursor_tab(vt);
+            break;
+        case BELL:
+            vt->push_event(vt, &(VTEvent) { .type = VT_EVENT_BELL });
+            break;
+        default:
+            vt_add_regular_char(vt, c);
+    }
+}
+
+void vt_write(VT* vt, const char* str, size_t str_sz)
+{
+    for (size_t i = 0; i < str_sz; ++i) {
+        CHAR c = str[i];
+        if (!vt->esc_buffer[0])   // not parsing escape sequence
+            vt_add_char(vt, c);
+        else
+            vt_add_escape_char(vt, c);
+    }
 }
 
 #pragma endregion
@@ -107,7 +257,7 @@ void vt_write(VT* vt, const char* str, int str_sz)
 
 #pragma region Information
 
-VTCell vt_char(VT* vt, int row, int column)
+VTCell vt_char(VT* vt, INT row, INT column)
 {
     VTCell ch = vt->matrix[row * vt->columns + column];
 
@@ -130,19 +280,22 @@ VTCell vt_char(VT* vt, int row, int column)
     return ch;
 }
 
-size_t vt_rows(VT* vt)
+INT vt_rows(VT* vt)
 {
     return vt->rows;
 }
 
-size_t vt_columns(VT* vt)
+INT vt_columns(VT* vt)
 {
     return vt->columns;
 }
 
 VTCursor vt_cursor(VT* vt)
 {
-    return vt->cursor;
+    VTCursor cursor = vt->cursor;
+    cursor.row = MIN(MAX(cursor.row, 0), vt->rows - 1);
+    cursor.column = MIN(MAX(cursor.column, 0), vt->columns - 1);
+    return cursor;
 }
 
 #pragma endregion
@@ -264,7 +417,7 @@ static const InputKey vt_strings_ctrl_shift[] = {
 };
 
 
-int vt_translate_key(VT* vt, uint16_t key, bool shift, bool ctrl, char* output, int max_sz)
+int vt_translate_key(VT* vt, uint16_t key, bool shift, bool ctrl, char* output, size_t max_sz)
 {
     (void) vt;
 

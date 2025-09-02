@@ -1,10 +1,11 @@
 CPPFLAGS=-Wall -Wextra -std=c23 -g -O0
 LDFLAGS=
-OBJ=tests.o
 
 all: libvirtterm-tests
 
-libvirtterm-tests: ${OBJ}
+tests.o: ../libvirtterm.c
+
+libvirtterm-tests: tests.o
 	gcc -o $@ $^
 
 check: libvirtterm-tests

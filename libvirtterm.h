@@ -5,6 +5,9 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#define CHAR char
+#define INT  int16_t
+
 //
 // Keys
 //
@@ -77,7 +80,7 @@ typedef struct VTConfig {
     VTUpdateEvents   update_events;          // when a cell changes, send updates per cell, per line, or none at all
     VTScrollAction   on_scroll;              // how scrolls are reported back to the application
     bool             bold_is_bright;         // true = bold is also bright color
-    char             acs_chars[32];          // see https://en.wikipedia.org/wiki/DEC_Special_Graphics (0x60 ~ 0x7e)
+    CHAR             acs_chars[32];          // see https://en.wikipedia.org/wiki/DEC_Special_Graphics (0x60 ~ 0x7e)
 } VTConfig;
 
 #define VT_DEFAULT_CONFIG (VTConfig) {      \
@@ -116,7 +119,7 @@ typedef struct __attribute__((packed)) VTAttrib {
 })
 
 typedef struct __attribute__((packed)) VTCell {
-    char     ch;
+    CHAR     ch;
     VTAttrib attrib;
 } VTCell;
 
@@ -167,20 +170,21 @@ typedef struct VTCursor {
 // Functions
 //
 
-VT*  vt_new(int rows, int columns, VTCallback callback, VTConfig const* config, void* data);
+VT*  vt_new(INT rows, INT columns, VTCallback callback, VTConfig const* config, void* data);
 void vt_free(VT* vt);
 
 void vt_reset(VT* vt);
 
-VTCell vt_char(VT* vt, int row, int column);
+VTCell vt_char(VT* vt, INT row, INT column);
 
-void vt_resize(VT* vt, int rows, int columns);
-void vt_write(VT* vt, const char* str, int str_sz);
-int  vt_translate_key(VT* vt, uint16_t key, bool shift, bool ctrl, char* output, int max_sz);
+void vt_resize(VT* vt, INT rows, INT columns);
+void vt_write(VT* vt, const char* str, size_t str_sz);
+int  vt_translate_key(VT* vt, uint16_t key, bool shift, bool ctrl, char* output, size_t max_sz);
 
+#define CURSOR_NOT_VISIBLE -1
 VTCursor vt_cursor(VT* vt);
 
-size_t vt_rows(VT* vt);
-size_t vt_columns(VT* vt);
+INT vt_rows(VT* vt);
+INT vt_columns(VT* vt);
 
 #endif
