@@ -54,6 +54,7 @@ typedef struct VT {
 #define CR          '\r'
 #define LF          '\n'
 #define TAB         '\t'
+#define ESC         '\e'
 
 #pragma endregion
 
@@ -158,6 +159,11 @@ bool vt_next_event(VT* vt, VTEvent* e)
 static void vt_free_event_queue(VT* vt)
 {
     while (vt_next_event(vt, NULL));
+}
+
+static void vt_beep(VT* vt)
+{
+    vt_add_event(vt, &(VTEvent) { .type = VT_EVENT_BELL });
 }
 
 #pragma endregion
@@ -288,9 +294,9 @@ static void vt_scroll_based_on_cursor(VT* vt)
 
 #pragma region Escape Sequences
 
-static void start_escape_seq(VT* vt, char c)
+static void vt_start_escape_seq(VT* vt, char c)
 {
-    // TODO
+    vt->esc_buffer[0] = c;
 }
 
 static bool parse_escape_seq(VT* vt)
@@ -301,14 +307,19 @@ static bool parse_escape_seq(VT* vt)
 
 static void end_escape_seq(VT* vt)
 {
-    // TODO
+    memset(vt->esc_buffer, 0, sizeof vt->esc_buffer);
 }
 
 static void vt_add_escape_char(VT* vt, char c)
 {
     size_t len = strlen(vt->esc_buffer);
-    if (len == sizeof vt->esc_buffer - 1) {
+    if (len == sizeof vt->esc_buffer - 1) {   // parsing of the escape sequence failed, send back to regular parser
+        char copy_buf[sizeof vt->esc_buffer];
+        memcpy(copy_buf, vt->esc_buffer, sizeof vt->esc_buffer);
+        fprintf(stderr, "Invalid escape sequence: ESC %s", copy_buf);
+        vt_beep(vt);
         end_escape_seq(vt);
+        vt_write(vt, &copy_buf[1], strlen(copy_buf) - 1);
         return;
     }
 
@@ -353,7 +364,10 @@ static void vt_add_char(VT* vt, CHAR c)
             vt_cursor_tab(vt);
             break;
         case BELL:
-            vt_add_event(vt, &(VTEvent) { .type = VT_EVENT_BELL });
+            vt_beep(vt);
+            break;
+        case ESC:
+            vt_start_escape_seq(vt, c);
             break;
         default:
             vt_add_regular_char(vt, c);

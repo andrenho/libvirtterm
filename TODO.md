@@ -1,11 +1,11 @@
 TODO:
   - [x] Create testing infra
   - [x] Basic operation
-    - [ ] Report events
-    - [ ] Support for debugging
+    - [x] Report events
+    - [x] Support for debugging
+  - [x] Keypress support
+  - [x] Basic special chars
   - [ ] Escape code parsing (state machine)
-  - [ ] Keypress support
-  - [ ] Basic special chars
   - [ ] Functions/escape sequences controlling cursor movement (including attrib and visibility)
   - [ ] Functions/escape sequences controlling scroll (including new line)
   - [ ] Functions/escape sequences controlling color and formatting (including true color)
