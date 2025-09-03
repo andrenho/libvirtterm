@@ -310,16 +310,21 @@ static void end_escape_seq(VT* vt)
     memset(vt->esc_buffer, 0, sizeof vt->esc_buffer);
 }
 
+static void cancel_escape_seq(VT* vt)
+{
+    char copy_buf[sizeof vt->esc_buffer];
+    memcpy(copy_buf, vt->esc_buffer, sizeof vt->esc_buffer);
+    fprintf(stderr, "Invalid escape sequence: ESC %s", copy_buf);
+    vt_beep(vt);
+    end_escape_seq(vt);
+    vt_write(vt, &copy_buf[1], strlen(copy_buf) - 1);
+}
+
 static void vt_add_escape_char(VT* vt, char c)
 {
     size_t len = strlen(vt->esc_buffer);
     if (len == sizeof vt->esc_buffer - 1) {   // parsing of the escape sequence failed, send back to regular parser
-        char copy_buf[sizeof vt->esc_buffer];
-        memcpy(copy_buf, vt->esc_buffer, sizeof vt->esc_buffer);
-        fprintf(stderr, "Invalid escape sequence: ESC %s", copy_buf);
-        vt_beep(vt);
-        end_escape_seq(vt);
-        vt_write(vt, &copy_buf[1], strlen(copy_buf) - 1);
+        cancel_escape_seq(vt);
         return;
     }
 

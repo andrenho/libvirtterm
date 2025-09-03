@@ -43,5 +43,8 @@ int main()
     ACH(0, 1, '0') ACU(9, 19)                         // no scroll for now
     W("x") ACH(0, 1, '1') ACH(9, 0, 'x') ACU(9, 1)   // scroll
 
+    // escape sequence too long
+    R W("\e012345678901234567890123456789")
+
     vt_free(vt);
 }
