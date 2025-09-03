@@ -271,7 +271,7 @@ static void vt_cursor_tab(VT* vt)
 
 #pragma region Scrolling
 
-static void vt_scroll_vertical(VT* vt, int top_row, int bottom_row, int rows_forward)
+static void vt_scroll_vertical(VT* vt, INT top_row, INT bottom_row, INT rows_forward)
 {
     if (rows_forward == 0)
         return;
@@ -293,6 +293,26 @@ static void vt_scroll_vertical(VT* vt, int top_row, int bottom_row, int rows_for
     });
 }
 
+static void vt_scroll_horizontal(VT* vt, INT row, INT start_column, INT end_column, INT columns_forward)
+{
+    if (columns_forward == 0)
+        return;
+
+    if (columns_forward > 0) {
+        vt_memmove(vt, row, row, start_column, end_column - columns_forward, 0, columns_forward);
+        vt_memset_ch(vt, row, row, start_column, start_column + columns_forward, ' ');
+    } else if (columns_forward < 0) {
+        vt_memmove(vt, row, row, start_column - columns_forward, end_column, 0, columns_forward);
+        vt_memset_ch(vt, row, row, end_column + columns_forward, end_column, ' ');
+    }
+
+    // report events
+    vt_add_event(vt, &(VTEvent) {
+        .type = VT_EVENT_CELLS_UPDATED,
+        .cells = { .row_start = row, .row_end = row, .column_start = MIN(start_column, start_column + columns_forward), .column_end = MAX(end_column, end_column + columns_forward) },
+    });
+}
+
 static void vt_scroll_based_on_cursor(VT* vt)
 {
     if (vt->cursor.column >= vt->columns) {
@@ -304,6 +324,13 @@ static void vt_scroll_based_on_cursor(VT* vt)
         vt_scroll_vertical(vt, vt->scroll_area_top, vt->scroll_area_bottom, 1);
         vt_cursor_advance(vt, -1, 0);
     }
+}
+
+static void vt_set_scoll_area(VT* vt, INT top, INT bottom)
+{
+    vt->scroll_area_top = top;
+    vt->scroll_area_bottom = bottom;
+    vt_move_cursor_to(vt, 0, 0);
 }
 
 #pragma endregion
@@ -344,6 +371,76 @@ static bool match_escape_seq(const char* data, const char* pattern, INT args[8],
     }
 
     return i == (int) strlen(data);
+}
+
+static void update_current_attrib(VT* vt, int arg)
+{
+    switch (arg) {
+        case 0:
+            vt->current_attrib.bold = false;
+            vt->current_attrib.dim = false;
+            vt->current_attrib.underline = false;
+            vt->current_attrib.blink = false;
+            vt->current_attrib.reverse = false;
+            vt->current_attrib.invisible = false;
+            vt->current_attrib.italic = false;
+            vt->current_attrib.fg_color = vt->config.default_fg_color;
+            vt->current_attrib.bg_color = vt->config.default_bg_color;
+            break;
+        case 1: vt->current_attrib.bold = true; break;
+        case 2: vt->current_attrib.dim = true; break;
+        case 3: vt->current_attrib.italic = true; break;
+        case 4: vt->current_attrib.underline = true; break;
+        case 5:
+        case 6:
+            vt->current_attrib.blink = true;
+            break;
+        case 7: vt->current_attrib.reverse = true; break;
+        case 8: vt->current_attrib.invisible = true; break;
+        case 22:
+            vt->current_attrib.bold = false;
+            vt->current_attrib.dim = false;
+            break;
+        case 23: vt->current_attrib.italic = false; break;
+        case 24: vt->current_attrib.underline = false; break;
+        case 25: vt->current_attrib.blink = false; break;
+        case 27: vt->current_attrib.reverse = false; break;
+        case 28: vt->current_attrib.invisible = false; break;
+        case 30: vt->current_attrib.fg_color = VT_BLACK; break;
+        case 31: vt->current_attrib.fg_color = VT_RED; break;
+        case 32: vt->current_attrib.fg_color = VT_GREEN; break;
+        case 33: vt->current_attrib.fg_color = VT_YELLOW; break;
+        case 34: vt->current_attrib.fg_color = VT_BLUE; break;
+        case 35: vt->current_attrib.fg_color = VT_MAGENTA; break;
+        case 36: vt->current_attrib.fg_color = VT_CYAN; break;
+        case 37: vt->current_attrib.fg_color = VT_WHITE; break;
+        case 39: vt->current_attrib.fg_color = vt->config.default_fg_color; break;
+        case 40: vt->current_attrib.bg_color = VT_BLACK; break;
+        case 41: vt->current_attrib.bg_color = VT_RED; break;
+        case 42: vt->current_attrib.bg_color = VT_GREEN; break;
+        case 43: vt->current_attrib.bg_color = VT_YELLOW; break;
+        case 44: vt->current_attrib.bg_color = VT_BLUE; break;
+        case 45: vt->current_attrib.bg_color = VT_MAGENTA; break;
+        case 46: vt->current_attrib.bg_color = VT_CYAN; break;
+        case 47: vt->current_attrib.bg_color = VT_WHITE; break;
+        case 49: vt->current_attrib.bg_color = vt->config.default_fg_color; break;
+        case 90: vt->current_attrib.fg_color = VT_BRIGHT_BLACK; break;
+        case 91: vt->current_attrib.fg_color = VT_BRIGHT_RED; break;
+        case 92: vt->current_attrib.fg_color = VT_BRIGHT_GREEN; break;
+        case 93: vt->current_attrib.fg_color = VT_BRIGHT_YELLOW; break;
+        case 94: vt->current_attrib.fg_color = VT_BRIGHT_BLUE; break;
+        case 95: vt->current_attrib.fg_color = VT_BRIGHT_MAGENTA; break;
+        case 96: vt->current_attrib.fg_color = VT_BRIGHT_CYAN; break;
+        case 97: vt->current_attrib.fg_color = VT_BRIGHT_WHITE; break;
+        case 100: vt->current_attrib.bg_color = VT_BRIGHT_BLACK; break;
+        case 101: vt->current_attrib.bg_color = VT_BRIGHT_RED; break;
+        case 102: vt->current_attrib.bg_color = VT_BRIGHT_GREEN; break;
+        case 103: vt->current_attrib.bg_color = VT_BRIGHT_YELLOW; break;
+        case 104: vt->current_attrib.bg_color = VT_BRIGHT_BLUE; break;
+        case 105: vt->current_attrib.bg_color = VT_BRIGHT_MAGENTA; break;
+        case 106: vt->current_attrib.bg_color = VT_BRIGHT_CYAN; break;
+        case 107: vt->current_attrib.bg_color = VT_BRIGHT_WHITE; break;
+    }
 }
 
 static void escape_seq_clear_cells(VT* vt, char mode, int parameter)
@@ -393,14 +490,30 @@ static bool parse_escape_seq(VT* vt)
 
     if (MATCH("\e[?%h"))        { T }    // do nothing for now (Xterm extension)
     if (MATCH("\e[?%l"))        { T }    // do nothing for now (Xterm extension)
+    if (MATCH("\e[%@"))         { vt_scroll_horizontal(vt, vt->cursor.row, vt->cursor.column, vt->columns - 1, N(args[0])); T }
     if (MATCH("\e[%A"))         { vt_cursor_advance(vt, -N(args[0]), 0); T }
     if (MATCH("\e[%B"))         { vt_cursor_advance(vt, N(args[0]), 0); T }
     if (MATCH("\e[%C"))         { vt_cursor_advance(vt, 0, N(args[0])); T }
     if (MATCH("\e[%D"))         { vt_cursor_advance(vt, 0, -N(args[0])); T }
+    if (MATCH("\e[%E"))         { vt_cursor_advance(vt, args[0] - 1, -vt->cursor.column); T }
+    if (MATCH("\e[%F"))         { vt_cursor_advance(vt, args[0] + 1, -vt->cursor.column); T }
     if (MATCH("\e[%G"))         { vt_move_cursor_to(vt, vt->cursor.row, args[0] - 1); T }
-    if (MATCH("\e[%d"))         { vt_move_cursor_to(vt, args[0] - 1, vt->cursor.column); T }
+    if (MATCH("\e[%%H"))        { vt_move_cursor_to(vt, args[0] - 1, args[1] - 1); T }
     if (MATCH("\e[%K"))         { escape_seq_clear_cells(vt, 'K', args[0]); T }
     if (MATCH("\e[%J"))         { escape_seq_clear_cells(vt, 'J', args[0]); T }
+    if (MATCH("\e[%L"))         { vt_scroll_vertical(vt, vt->scroll_area_top, vt->scroll_area_bottom, N(args[0])); T }
+    if (MATCH("\e[%M"))         { vt_scroll_vertical(vt, vt->scroll_area_top, vt->scroll_area_bottom, -N(args[0])); T }
+    if (MATCH("\e[%P"))         { vt_scroll_horizontal(vt, vt->cursor.row, vt->cursor.column, vt->columns - 1, -N(args[0])); T }
+    if (MATCH("\e[%d"))         { vt_move_cursor_to(vt, args[0] - 1, vt->cursor.column); T }
+    if (MATCH("\e[%%r"))        { vt_set_scoll_area(vt, args[0] - 1, args[1] - 1); T }
+
+    if (MATCH("\e[%%%m")) {
+        update_current_attrib(vt, 0);
+        for (int i = 0; i < argn; ++i)
+            if (i == 0 || (i > 0 && args[i] != 0))
+                update_current_attrib(vt, args[i]);
+        T
+    }
 
 #undef MATCH
 #undef T

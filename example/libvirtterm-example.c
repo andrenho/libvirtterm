@@ -32,7 +32,7 @@ static SDL_Texture*     font;
 
 #define FONT_W 8
 #define FONT_H 15
-#define ZOOM 2.f
+#define ZOOM 1.f
 #define BORDER 16
 #define INPUT_BUFFER_SIZE 16*1024
 
