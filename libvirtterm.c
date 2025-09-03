@@ -227,22 +227,39 @@ static void vt_memmove(VT* vt, INT row_start, INT row_end, INT column_start, INT
 
 #pragma region Cursor Movement
 
+static void reframe_cursor(VT* vt)
+{
+    vt->cursor.row = MIN(MAX(vt->cursor.row, 0), vt->rows);
+    vt->cursor.column = MIN(MAX(vt->cursor.column, 0), vt->columns);
+}
+
 static void vt_cursor_advance(VT* vt, int rows, int columns)
 {
     vt->cursor.row += rows;
     vt->cursor.column += columns;
+    reframe_cursor(vt);
+    vt_add_event(vt, &(VTEvent) { .type = VT_EVENT_CURSOR_MOVED });
+}
+
+static void vt_move_cursor_to(VT* vt, INT row, INT column)
+{
+    vt->cursor.row = row;
+    vt->cursor.column = column;
+    reframe_cursor(vt);
     vt_add_event(vt, &(VTEvent) { .type = VT_EVENT_CURSOR_MOVED });
 }
 
 static void vt_cursor_to_bol(VT* vt)
 {
     vt->cursor.column = 0;
+    reframe_cursor(vt);
     vt_add_event(vt, &(VTEvent) { .type = VT_EVENT_CURSOR_MOVED });
 }
 
 static void vt_cursor_tab(VT* vt)
 {
     vt->cursor.column = ((vt->cursor.column / 8) + 1) * 8;
+    reframe_cursor(vt);
     vt_add_event(vt, &(VTEvent) { .type = VT_EVENT_CURSOR_MOVED });
 }
 
@@ -297,8 +314,13 @@ static void vt_scroll_based_on_cursor(VT* vt)
 
 #pragma region Escape Sequences
 
-#define ESC_XTERM           "\e[?%h"
-#define ESC_CURSOR_RIGHT    "\e[%C"
+#define ESC_XTERM               "\e[?%h"
+#define ESC_CURSOR_UP
+#define ESC_CURSOR_DOWN
+#define ESC_CURSOR_RIGHT
+#define ESC_CURSOR_LEFT
+#define ESC_MOVE_CURSOR_TO_COL
+#define ESC_MOVE_CURSOR_TO_ROW
 
 static void vt_start_escape_seq(VT* vt, char c)
 {
@@ -332,23 +354,65 @@ static bool match_escape_seq(const char* data, const char* pattern, INT args[8],
     return i == (int) strlen(data);
 }
 
-static inline INT _0to1(INT n)
+static void escape_seq_clear_cells(VT* vt, char mode, int parameter)
 {
-    return n == 0 ? 1 : n;
+    if (mode == 'J') {
+        switch (parameter) {
+            case 0:  // cursor to end of screen
+                vt_memset_ch(vt, vt->cursor.row, vt->rows - 1, vt->cursor.column, vt->columns - 1, ' ');
+            break;
+            case 1:  // start of screen to cursor
+                vt_memset_ch(vt, 0, vt->cursor.row, 0, vt->cursor.column, ' ');
+            break;
+            case 2:  // all screen
+                vt_memset_ch(vt, 0, vt->rows - 1, 0, vt->columns - 1, ' ');
+            // TODO - send event
+            break;
+            case 3:
+                break;
+            default:
+                fprintf(stderr, "Unsupported parameter for ESC[#J");
+        }
+    } else if (mode == 'K') {
+        switch (parameter) {
+            case 0:  // cursor to end of line
+                vt_memset_ch(vt, vt->cursor.row, vt->cursor.row, vt->cursor.column, vt->columns - 1, ' ');
+            break;
+            case 1:  // start of line to cursor
+                vt_memset_ch(vt, vt->cursor.row, vt->cursor.row, 0, vt->cursor.column, ' ');
+            break;
+            case 2:  // all line
+                vt_memset_ch(vt, vt->cursor.row, vt->cursor.row, 0, vt->columns - 1, ' ');
+            break;
+            default:
+                fprintf(stderr, "Unsupported parameter for ESC[#K");
+        }
+    }
 }
 
 static bool parse_escape_seq(VT* vt)
 {
     INT args[8];
     int argn;
+
 #define T return true;
+#define N(n) ((n) == 0 ? 1 : (n))
 #define MATCH(pattern) match_escape_seq(vt->esc_buffer, pattern, args, &argn)
 
-    if (MATCH(ESC_XTERM))           { T }    // do nothing for now
-    if (MATCH(ESC_CURSOR_RIGHT))    { vt_cursor_advance(vt, 0, _0to1(args[0])); T }
+    if (MATCH("\e[?%h"))        { T }    // do nothing for now (Xterm extension)
+    if (MATCH("\e[?%l"))        { T }    // do nothing for now (Xterm extension)
+    if (MATCH("\e[%A"))         { vt_cursor_advance(vt, -N(args[0]), 0); T }
+    if (MATCH("\e[%B"))         { vt_cursor_advance(vt, N(args[0]), 0); T }
+    if (MATCH("\e[%C"))         { vt_cursor_advance(vt, 0, N(args[0])); T }
+    if (MATCH("\e[%D"))         { vt_cursor_advance(vt, 0, -N(args[0])); T }
+    if (MATCH("\e[%G"))         { vt_move_cursor_to(vt, vt->cursor.row, args[0] - 1); T }
+    if (MATCH("\e[%d"))         { vt_move_cursor_to(vt, args[0] - 1, vt->cursor.column); T }
+    if (MATCH("\e[%K"))         { escape_seq_clear_cells(vt, 'K', args[0]); T }
+    if (MATCH("\e[%J"))         { escape_seq_clear_cells(vt, 'J', args[0]); T }
 
 #undef MATCH
 #undef T
+
     return false;
 }
 
