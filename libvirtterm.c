@@ -72,8 +72,8 @@ VT* vt_new(INT rows, INT columns, VTConfig const* config, void* data)
     vt->cursor = (VTCursor) { .column = 0, .row = 0, .visible = true };
     vt->config = *config;
     vt->current_attrib = DEFAULT_ATTR;
-    vt->scroll_area_top = 1;
-    vt->scroll_area_bottom = vt->rows;
+    vt->scroll_area_top = 0;
+    vt->scroll_area_bottom = vt->rows - 1;
     vt->event_queue_start = NULL;
     vt->event_queue_end = NULL;
     vt->data = data;
@@ -313,14 +313,6 @@ static void vt_scroll_based_on_cursor(VT* vt)
 //
 
 #pragma region Escape Sequences
-
-#define ESC_XTERM               "\e[?%h"
-#define ESC_CURSOR_UP
-#define ESC_CURSOR_DOWN
-#define ESC_CURSOR_RIGHT
-#define ESC_CURSOR_LEFT
-#define ESC_MOVE_CURSOR_TO_COL
-#define ESC_MOVE_CURSOR_TO_ROW
 
 static void vt_start_escape_seq(VT* vt, char c)
 {
