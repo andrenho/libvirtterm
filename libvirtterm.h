@@ -68,8 +68,6 @@ typedef enum VTColor {
 // Config
 //
 
-typedef enum { VT_NO_UPDATES, VT_CELL_UPDATE, VT_ROW_UPDATE } VTUpdateEvents;
-typedef enum { VT_NOTIFY, VT_REFRESH } VTScrollAction;
 typedef enum { VT_NO_DEBUG, VT_DEBUG_ERRORS_ONLY, VT_DEBUG_ALL_SEQUENCES, VT_DEBUG_ALL_BYTES } VTDebug;
 
 typedef struct VTConfig {
@@ -78,8 +76,6 @@ typedef struct VTConfig {
     VTColor          cursor_color;
     VTColor          cursor_char_color;
     bool             automatic_cursor;       // if true, control cursor from within libvirtterm, else sends cursor updates as events
-    VTUpdateEvents   update_events;          // when a cell changes, send updates per cell, per line, or none at all
-    VTScrollAction   on_scroll;              // how scrolls are reported back to the application
     bool             bold_is_bright;         // true = bold is also bright color
     CHAR             acs_chars[32];          // see https://en.wikipedia.org/wiki/DEC_Special_Graphics (0x60 ~ 0x7e)
     VTDebug          debug;
@@ -91,8 +87,6 @@ typedef struct VTConfig {
     .cursor_color = VT_BRIGHT_GREEN,        \
     .cursor_char_color = VT_BLACK,          \
     .automatic_cursor = true,               \
-    .update_events = VT_NO_UPDATES,         \
-    .on_scroll = VT_REFRESH,                \
     .bold_is_bright = true,                 \
     .acs_chars = "+#????o#??+++++~---_++++|<>*!fo", \
     .debug = VT_NO_DEBUG,                   \
@@ -131,11 +125,8 @@ typedef struct __attribute__((packed)) VTCell {
 //
 
 typedef enum VTEventType {
-    VT_EVENT_CLEAR_SCREEN,
-    VT_EVENT_CELL_UPDATE,
-    VT_EVENT_ROW_UPDATE,
+    VT_EVENT_CELLS_UPDATED,
     VT_EVENT_CURSOR_MOVED,
-    VT_EVENT_SCROLL_UP,
     VT_EVENT_BELL,
 } VTEventType;
 
@@ -143,15 +134,11 @@ typedef struct VTEvent {
     VTEventType type;
     union {
         struct {
-            int row;
-            int column;
-        } cell;
-        int row;
-        struct {
-            int count;
-            int top_row;
-            int bottom_row;
-        } scroll;
+            INT row_start;
+            INT row_end;
+            INT column_start;
+            INT column_end;
+        } cells;
     };
     struct VTEvent* _next;
 } VTEvent;
@@ -172,18 +159,21 @@ typedef struct VTCursor {
 // Functions
 //
 
+// initialization
 VT*  vt_new(INT rows, INT columns, VTConfig const* config, void* data);
 void vt_free(VT* vt);
 
+// events
+bool vt_next_event(VT* vt, VTEvent* e);
+
+// operations
 void vt_reset(VT* vt);
-
-VTCell vt_char(VT* vt, INT row, INT column);
-
 void vt_resize(VT* vt, INT rows, INT columns);
 void vt_write(VT* vt, const char* str, size_t str_sz);
-int  vt_translate_key(VT* vt, uint16_t key, bool shift, bool ctrl, char* output, size_t max_sz);
 
-bool vt_next_event(VT* vt, VTEvent* e);
+// information
+VTCell vt_char(VT* vt, INT row, INT column);
+int    vt_translate_key(VT* vt, uint16_t key, bool shift, bool ctrl, char* output, size_t max_sz);
 
 #define CURSOR_NOT_VISIBLE -1
 VTCursor vt_cursor(VT* vt);

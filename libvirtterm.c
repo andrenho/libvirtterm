@@ -36,7 +36,6 @@ typedef struct VT {
 
     // escape sequence parsing
     char       esc_buffer[32];
-    bool*      rows_updated;
 
     // events
     VTEvent*   event_queue_start;
@@ -88,7 +87,6 @@ void vt_free(VT* vt)
 {
     if (vt) {
         vt_free_event_queue(vt);
-        free(vt->rows_updated);
         free(vt->matrix);
     }
     free(vt);
@@ -98,8 +96,8 @@ void vt_reset(VT* vt)
 {
     vt->cursor = (VTCursor) { .column = 0, .row = 0, .visible = true };
     vt->current_attrib = DEFAULT_ATTR;
-    vt->scroll_area_top = 1;
-    vt->scroll_area_bottom = vt->rows;
+    vt->scroll_area_top = 0;
+    vt->scroll_area_bottom = vt->rows - 1;
     for (int i = 0; i < vt->rows * vt->columns; ++i)
         vt->matrix[i] = (VTCell) { .ch = ' ', .attrib = DEFAULT_ATTR };
 }
@@ -112,7 +110,6 @@ void vt_resize(VT* vt, INT rows, INT columns)
     free(vt->matrix);
 
     vt->matrix = malloc(sizeof(VTCell) * rows * columns);
-    vt->rows_updated = calloc(sizeof(bool), rows);
     for (int i = 0; i < rows * columns; ++i)
         vt->matrix[i] = (VTCell) { .ch = ' ', .attrib = DEFAULT_ATTR };
 
@@ -179,11 +176,41 @@ static void vt_set_ch(VT* vt, INT row, INT column, CHAR c)
         .ch = c,
         .attrib = vt->current_attrib,
     };
+}
 
-    if (vt->config.update_events == VT_ROW_UPDATE)
-        vt->rows_updated[row] = true;
-    else if (vt->config.update_events == VT_CELL_UPDATE)
-        vt_add_event(vt, &(VTEvent) { .type = VT_EVENT_CELL_UPDATE, .cell = { .row = row, .column = column } });
+static void vt_memset_ch(VT* vt, INT row_start, INT row_end, INT column_start, INT column_end, CHAR c)
+{
+    row_start = MIN(MAX(row_start, 0), vt->rows - 1);
+    row_end = MIN(MAX(row_end, 0), vt->rows - 1);
+    column_start = MIN(MAX(column_start, 0), vt->columns - 1);
+    column_end = MIN(MAX(column_end, 0), vt->columns - 1);
+
+    if (row_start > row_end || column_start > column_end)
+        return;
+
+    size_t start = row_start * vt->columns + column_start;
+    size_t end = row_end * vt->columns + column_end;
+
+    for (size_t i = start; i <= end; ++i)
+        vt->matrix[i] = (VTCell) { .ch = c, .attrib = vt->current_attrib };
+}
+
+static void vt_memmove(VT* vt, INT row_start, INT row_end, INT column_start, INT column_end, INT n_rows, INT n_columns)
+{
+    row_start = MIN(MAX(row_start, 0), vt->rows - 1);
+    row_end = MIN(MAX(row_end, 0), vt->rows - 1);
+    column_start = MIN(MAX(column_start, 0), vt->columns - 1);
+    column_end = MIN(MAX(column_end, 0), vt->columns - 1);
+
+    if (row_start > row_end || column_start > column_end)
+        return;
+
+    size_t start = row_start * vt->columns + column_start;
+    size_t end = row_end * vt->columns + column_end;
+    size_t dest = (row_start + n_rows) * vt->columns + (column_start + n_columns);
+    size_t size = end - start;
+
+    memmove(&vt->matrix[dest], &vt->matrix[start], size * sizeof(VTCell));
 }
 
 #pragma endregion
@@ -218,14 +245,39 @@ static void vt_cursor_tab(VT* vt)
 
 #pragma region Scrolling
 
+static void vt_scroll_vertical(VT* vt, int top_row, int bottom_row, int rows_forward)
+{
+    if (rows_forward == 0)
+        return;
+
+    vt_memmove(vt, top_row + rows_forward, bottom_row, 0, vt->columns - 1, -rows_forward, 0);
+    if (rows_forward > 0) {
+        // clear rows at the bottom
+        vt_memset_ch(vt, bottom_row - rows_forward + 1, bottom_row, 0, vt->columns - 1, ' ');
+    }
+    else {
+        // clear rows at the top
+        vt_memset_ch(vt, top_row, top_row + rows_forward - 1, 0, vt->columns - 1, ' ');
+    }
+
+    // report events
+    vt_add_event(vt, &(VTEvent) {
+        .type = VT_EVENT_CELLS_UPDATED,
+        .cells = { .row_start = top_row, .row_end = bottom_row, .column_start = 0, .column_end = vt->columns },
+    });
+}
+
 static void vt_scroll_based_on_cursor(VT* vt)
 {
-    if (vt->cursor.column == vt->columns) {
+    if (vt->cursor.column >= vt->columns) {
         vt->cursor.column = 0;
         ++vt->cursor.row;
     }
 
-    // TODO - scroll bottom
+    if (vt->cursor.row > vt->scroll_area_bottom) {
+        vt_scroll_vertical(vt, vt->scroll_area_top, vt->scroll_area_bottom, 1);
+        vt_cursor_advance(vt, -1, 0);
+    }
 }
 
 #pragma endregion
@@ -278,6 +330,10 @@ static void vt_add_regular_char(VT* vt, CHAR c)
 {
     vt_scroll_based_on_cursor(vt);
     vt_set_ch(vt, vt->cursor.row, vt->cursor.column, c);
+    vt_add_event(vt, &(VTEvent) {
+        .type = VT_EVENT_CELLS_UPDATED,
+        .cells = { .row_start = vt->cursor.row, .row_end = vt->cursor.row, .column_start = vt->cursor.column, .column_end = vt->cursor.column }
+    });
     vt_cursor_advance(vt, 0, 1);
 }
 
@@ -318,13 +374,6 @@ void vt_write(VT* vt, const char* str, size_t str_sz)
         else
             vt_add_escape_char(vt, c);
     }
-
-    // send row events
-    if (vt->config.update_events == VT_ROW_UPDATE)
-        for (INT row = 0; row < vt->rows; ++row)
-            if (vt->rows_updated[row])
-                vt_add_event(vt, &(VTEvent) { .type = VT_EVENT_ROW_UPDATE, .row = row });
-    memset(vt->rows_updated, 0, vt->rows);
 }
 
 #pragma endregion

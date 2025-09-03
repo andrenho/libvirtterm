@@ -14,15 +14,14 @@
 int main()
 {
     VTConfig config = VT_DEFAULT_CONFIG;
-    config.update_events = VT_CELL_UPDATE;
-    config.debug = VT_DEBUG_ALL_BYTES;
+    // config.debug = VT_DEBUG_ALL_BYTES;
     VT* vt = vt_new(10, 20, &config, NULL);
 
     VTEvent e;
 
     // add single character
-    R W("A") ACH(0, 0, 'A') ACU(0, 1) // LEV(VT_EVENT_CELL_UPDATE) A(last_event.cell.row == 0) A(last_event.cell.column == 0)
-      A(vt_next_event(vt, &e)) A(e.type == VT_EVENT_CELL_UPDATE && e.cell.row == 0 && e.cell.column == 0)
+    R W("A") ACH(0, 0, 'A') ACU(0, 1)
+      A(vt_next_event(vt, &e)) A(e.type == VT_EVENT_CELLS_UPDATED && e.cells.row_start == 0 && e.cells.row_end == 0)
       W("b") ACH(0, 1, 'b') ACU(0, 2)
 
     // test end of line, and skip to next line
@@ -35,14 +34,14 @@ int main()
     R W("01234567890123456789\r") ACU(0, 0)
       W("\n") ACU(1, 0)
 
-    /*
     // test of page and scroll
     R
     for (size_t i = 0; i < 10; ++i) {
-        char buf[32];
-        sprintf(buf, "02%d 4567890123456789
+        char buf[32]; sprintf(buf, "%02d 34567890123456789", i);
+        W(buf) ACH(i, 1, i % 10 + '0')
     }
-    */
+    ACH(0, 1, '0') ACU(9, 19)                         // no scroll for now
+    W("x") ACH(0, 1, '1') ACH(9, 0, 'x') ACU(9, 1)   // scroll
 
     vt_free(vt);
 }
