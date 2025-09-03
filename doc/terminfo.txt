@@ -1,20 +1,20 @@
 terminfo(5)                      File Formats                      terminfo(5)
 
-NNAAMMEE
+NNAAMMEE
        terminfo - terminal capability data base
 
-SSYYNNOOPPSSIISS
+SSYYNNOOPPSSIISS
        /usr/share/terminfo/*/*
 
-DDEESSCCRRIIPPTTIIOONN
-       _T_e_r_m_i_n_f_o is a data base describing terminals, used by screen-oriented
-       programs such as nnvvii(1), rroogguuee(1) and libraries such as ccuurrsseess(3X).
-       _T_e_r_m_i_n_f_o describes terminals by giving a set of capabilities which they
+DDEESSCCRRIIPPTTIIOONN
+       _T_e_r_m_i_n_f_o is a data base describing terminals, used by screen-oriented
+       programs such as nnvvii(1), rroogguuee(1) and libraries such as ccuurrsseess(3X).
+       _T_e_r_m_i_n_f_o describes terminals by giving a set of capabilities which they
        have, by specifying how to perform screen operations, and by specifying
        padding requirements and initialization sequences.  This describes
-       nnccuurrsseess version 5.7 (patch 20081102).
+       nnccuurrsseess version 5.7 (patch 20081102).
 
-       Entries in _t_e_r_m_i_n_f_o consist of a sequence of `,' separated fields
+       Entries in _t_e_r_m_i_n_f_o consist of a sequence of `,' separated fields
        (embedded commas may be escaped with a backslash or notated as \054).
        White space after the `,' separator is ignored.  The first entry for
        each terminal gives the names which are known for the terminal,
@@ -26,14 +26,14 @@ DDEESSCCRRIIPPTTIIOONN
        case and blanks for readability.
 
        Lines beginning with a `#' in the first column are treated as comments.
-       While comment lines are legal at any point, the output of ccaappttooiinnffoo and
-       iinnffoottooccaapp (aliases for ttiicc) will move comments so they occur only
+       While comment lines are legal at any point, the output of ccaappttooiinnffoo and
+       iinnffoottooccaapp (aliases for ttiicc) will move comments so they occur only
        between entries.
 
        Newlines and leading tabs may be used for formatting entries for
-       readability.  These are removed from parsed entries.  The iinnffooccmmpp  --ff
+       readability.  These are removed from parsed entries.  The iinnffooccmmpp  --ff
        option relies on this to format if-then-else expressions: the result
-       can be read by ttiicc.
+       can be read by ttiicc.
 
        Terminal names (except for the last, verbose entry) should be chosen
        using the following conventions.  The particular piece of hardware
@@ -43,9 +43,9 @@ DDEESSCCRRIIPPTTIIOONN
        suffix.  Thus, a vt100 in 132 column mode would be vt100-w.  The
        following suffixes should be used where possible:
 
-            SSuuffffiixx                  MMeeaanniinngg                   EExxaammppllee
-            -_n_n      Number of lines on the screen            aaa-60
-            -_np      Number of pages of memory                c100-4p
+            SSuuffffiixx                  MMeeaanniinngg                   EExxaammppllee
+            -_n_n      Number of lines on the screen            aaa-60
+            -_np      Number of pages of memory                c100-4p
             -am      With automargins (usually the default)   vt100-am
             -m       Mono mode; suppress color                ansi-m
             -mc      Magic cookie; spaces when highlighting   wy30-mc
@@ -58,29 +58,29 @@ DDEESSCCRRIIPPTTIIOONN
             -vb      Use visible bell instead of beep         wy370-vb
             -w       Wide mode (> 80 columns, usually 132)    vt100-w
 
-       For more on terminal naming conventions, see the tteerrmm((77)) manual page.
+       For more on terminal naming conventions, see the tteerrmm((77)) manual page.
 
-   PPrreeddeeffiinneedd CCaappaabbiilliittiieess
+   PPrreeddeeffiinneedd CCaappaabbiilliittiieess
        The following is a complete table of the capabilities included in a
        terminfo description block and available to terminfo-using code.  In
        each line of the table,
 
-       The vvaarriiaabbllee is the name by which the programmer (at the terminfo
+       The vvaarriiaabbllee is the name by which the programmer (at the terminfo
        level) accesses the capability.
 
-       The ccaappnnaammee is the short name used in the text of the database, and is
+       The ccaappnnaammee is the short name used in the text of the database, and is
        used by a person updating the database.  Whenever possible, capnames
        are chosen to be the same as or similar to the ANSI X3.64-1979 standard
        (now superseded by ECMA-48, which uses identical or very similar
        names).  Semantics are also intended to match those of the
        specification.
 
-       The termcap code is the old tteerrmmccaapp capability name (some capabilities
+       The termcap code is the old tteerrmmccaapp capability name (some capabilities
        are new, and have names which termcap did not originate).
 
        Capability names have no hard length limit, but an informal limit of 5
        characters has been adopted to keep them short and to allow the tabs in
-       the source file CCaappss to line up nicely.
+       the source file CCaappss to line up nicely.
 
        Finally, the description field attempts to convey the semantics of the
        capability.  You may find some codes in the description field:
@@ -88,19 +88,19 @@ DDEESSCCRRIIPPTTIIOONN
        (P)    indicates that padding may be specified
 
        #[1-9] in the description field indicates that the string is passed
-              through tparm with parms as given (#_i).
+              through tparm with parms as given (#_i).
 
        (P*)   indicates that padding may vary in proportion to the number of
               lines affected
 
-       (#_i)   indicates the _ith parameter.
+       (#_i)   indicates the _ith parameter.
 
 
        These are the boolean capabilities:
 
 
-                  VVaarriiaabbllee            CCaapp--     TTCCaapp       DDeessccrriippttiioonn
-                  BBoooolleeaannss            nnaammee     CCooddee
+                  VVaarriiaabbllee            CCaapp--     TTCCaapp       DDeessccrriippttiioonn
+                  BBoooolleeaannss            nnaammee     CCooddee
           auto_left_margin            bw       bw     cub1 wraps from
                                                       column 0 to last
                                                       column
@@ -188,8 +188,8 @@ DDEESSCCRRIIPPTTIIOONN
        These are the numeric capabilities:
 
 
-                  VVaarriiaabbllee            CCaapp--     TTCCaapp       DDeessccrriippttiioonn
-                   NNuummeerriicc            nnaammee     CCooddee
+                  VVaarriiaabbllee            CCaapp--     TTCCaapp       DDeessccrriippttiioonn
+                   NNuummeerriicc            nnaammee     CCooddee
           columns                     cols     co     number of columns in
                                                       a line
           init_tabs                   it       it     tabs initially every
@@ -231,8 +231,8 @@ DDEESSCCRRIIPPTTIIOONN
        with SVr4's printer support.
 
 
-                  VVaarriiaabbllee            CCaapp--     TTCCaapp       DDeessccrriippttiioonn
-                   NNuummeerriicc            nnaammee     CCooddee
+                  VVaarriiaabbllee            CCaapp--     TTCCaapp       DDeessccrriippttiioonn
+                   NNuummeerriicc            nnaammee     CCooddee
           bit_image_entwining         bitwin   Yo     number of passes for
                                                       each bit-image row
           bit_image_type              bitype   Yp     type of bit-image
@@ -278,8 +278,8 @@ DDEESSCCRRIIPPTTIIOONN
        These are the string capabilities:
 
 
-                 VVaarriiaabbllee            CCaapp--     TTCCaapp        DDeessccrriippttiioonn
-                  SSttrriinngg             nnaammee     CCooddee
+                 VVaarriiaabbllee            CCaapp--     TTCCaapp        DDeessccrriippttiioonn
+                  SSttrriinngg             nnaammee     CCooddee
          acs_chars                   acsc     ac     graphics charset
                                                      pairs, based on vt100
          back_tab                    cbt      bt     back tab (P)
@@ -798,8 +798,8 @@ DDEESSCCRRIIPPTTIIOONN
        structure, but were originally not documented in the man page.
 
 
-                  VVaarriiaabbllee            CCaapp--       TTCCaapp      DDeessccrriippttiioonn
-                   SSttrriinngg             nnaammee       CCooddee
+                  VVaarriiaabbllee            CCaapp--       TTCCaapp      DDeessccrriippttiioonn
+                   SSttrriinngg             nnaammee       CCooddee
           alt_scancode_esc            scesa      S8     Alternate escape
                                                         for scancode
                                                         emulation
@@ -878,14 +878,14 @@ DDEESSCCRRIIPPTTIIOONN
 
         The XSI Curses standard added these hardcopy capabilities.  They were
         used in some post-4.1 versions of System V curses, e.g., Solaris 2.5
-        and IRIX 6.x.  Except for YYII, the nnccuurrsseess termcap names for them are
+        and IRIX 6.x.  Except for YYII, the nnccuurrsseess termcap names for them are
         invented.  According to the XSI Curses standard, they have no termcap
         names.  If your compiled terminfo entries use these, they may not be
         binary-compatible with System V terminfo entries after SVr4.1; beware!
 
 
-                  VVaarriiaabbllee            CCaapp--      TTCCaapp       DDeessccrriippttiioonn
-                   SSttrriinngg             nnaammee      CCooddee
+                  VVaarriiaabbllee            CCaapp--      TTCCaapp       DDeessccrriippttiioonn
+                   SSttrriinngg             nnaammee      CCooddee
           enter_horizontal_hl_mode    ehhlm     Xh     Enter horizontal
                                                        highlight mode
           enter_left_hl_mode          elhlm     Xl     Enter left highlight
@@ -907,28 +907,28 @@ DDEESSCCRRIIPPTTIIOONN
                                                        implementations use
                                                        sL for termcap).
 
-   UUsseerr--DDeeffiinneedd CCaappaabbiilliittiieess
-       The preceding section listed the _p_r_e_d_e_f_i_n_e_d capabilities.  They deal
+   UUsseerr--DDeeffiinneedd CCaappaabbiilliittiieess
+       The preceding section listed the _p_r_e_d_e_f_i_n_e_d capabilities.  They deal
        with some special features for terminals no longer (or possibly never)
        produced.  Occasionally there are special features of newer terminals
        which are awkward or impossible to represent by reusing the predefined
        capabilities.
 
-       nnccuurrsseess addresses this limitation by allowing user-defined
-       capabilities.  The ttiicc and iinnffooccmmpp programs provide the --xx option for
-       this purpose.  When --xx is set, ttiicc treats unknown capabilities as user-
-       defined.  That is, if ttiicc encounters a capability name which it does
+       nnccuurrsseess addresses this limitation by allowing user-defined
+       capabilities.  The ttiicc and iinnffooccmmpp programs provide the --xx option for
+       this purpose.  When --xx is set, ttiicc treats unknown capabilities as user-
+       defined.  That is, if ttiicc encounters a capability name which it does
        not recognize, it infers its type (boolean, number or string) from the
        syntax and makes an extended table entry for that capability.  The
-       uussee__eexxtteennddeedd__nnaammeess function makes this information conditionally
+       uussee__eexxtteennddeedd__nnaammeess function makes this information conditionally
        available to applications.  The ncurses library provides the data
        leaving most of the behavior to applications:
 
        •   User-defined capability strings whose name begins with “k” are
            treated as function keys.
 
-       •   The types (boolean, number, string) determined by ttiicc can be
-           inferred by successful calls on ttiiggeettffllaagg, etc.
+       •   The types (boolean, number, string) determined by ttiicc can be
+           inferred by successful calls on ttiiggeettffllaagg, etc.
 
        •   If the capability name happens to be two characters, the capability
            is also available through the termcap interface.
@@ -943,9 +943,9 @@ DDEESSCCRRIIPPTTIIOONN
        numbered keys and the handful of special named keys) is best done using
        the longer names available using terminfo.
 
-   AA SSaammppllee EEnnttrryy
+   AA SSaammppllee EEnnttrryy
        The following entry, describing an ANSI-standard terminal, is
-       representative of what a tteerrmmiinnffoo entry for a modern terminal typically
+       representative of what a tteerrmmiinnffoo entry for a modern terminal typically
        looks like.
 
        ansi|ansi/pc-term compatible with color,
@@ -981,7 +981,7 @@ DDEESSCCRRIIPPTTIIOONN
 
        Entries may continue onto multiple lines by placing white space at the
        beginning of each line except the first.  Comments may be included on
-       lines beginning with “#”.  Capabilities in _t_e_r_m_i_n_f_o are of three types:
+       lines beginning with “#”.  Capabilities in _t_e_r_m_i_n_f_o are of three types:
 
        •   Boolean capabilities which indicate that the terminal has some
            particular feature,
@@ -992,38 +992,38 @@ DDEESSCCRRIIPPTTIIOONN
        •   string capabilities, which give a sequence which can be used to
            perform particular terminal operations.
 
-   TTyyppeess ooff CCaappaabbiilliittiieess
+   TTyyppeess ooff CCaappaabbiilliittiieess
        All capabilities have names.  For instance, the fact that ANSI-standard
-       terminals have _a_u_t_o_m_a_t_i_c _m_a_r_g_i_n_s (i.e., an automatic return and line-
+       terminals have _a_u_t_o_m_a_t_i_c _m_a_r_g_i_n_s (i.e., an automatic return and line-
        feed when the end of a line is reached) is indicated by the capability
-       aamm.  Hence the description of ansi includes aamm.  Numeric capabilities
+       aamm.  Hence the description of ansi includes aamm.  Numeric capabilities
        are followed by the character “#” and then a positive value.  Thus
-       ccoollss, which indicates the number of columns the terminal has, gives the
+       ccoollss, which indicates the number of columns the terminal has, gives the
        value “80” for ansi.  Values for numeric capabilities may be specified
        in decimal, octal or hexadecimal, using the C programming language
        conventions (e.g., 255, 0377 and 0xff or 0xFF).
 
-       Finally, string valued capabilities, such as eell (clear to end of line
+       Finally, string valued capabilities, such as eell (clear to end of line
        sequence) are given by the two-character code, an “=”, and then a
        string ending at the next following “,”.
 
        A number of escape sequences are provided in the string valued
-       capabilities for easy encoding of characters there.  Both \\EE and \\ee map
-       to an ESCAPE character, ^^xx maps to a control-x for any appropriate x,
-       and the sequences \\nn \\ll \\rr \\tt \\bb \\ff \\ss give a newline, line-feed,
+       capabilities for easy encoding of characters there.  Both \\EE and \\ee map
+       to an ESCAPE character, ^^xx maps to a control-x for any appropriate x,
+       and the sequences \\nn \\ll \\rr \\tt \\bb \\ff \\ss give a newline, line-feed,
        return, tab, backspace, form-feed, and space.  Other escapes include
 
-       •   \\^^ for ^^,
+       •   \\^^ for ^^,
 
-       •   \\\\ for \\,
+       •   \\\\ for \\,
 
-       •   \\, for comma,
+       •   \\, for comma,
 
-       •   \\:: for ::,
+       •   \\:: for ::,
 
-       •   and \\00 for null.
+       •   and \\00 for null.
 
-           \\00 will produce \200, which does not terminate a string but behaves
+           \\00 will produce \200, which does not terminate a string but behaves
            as a null character on most terminals, providing CS7 is specified.
            See stty(1).
 
@@ -1034,63 +1034,63 @@ DDEESSCCRRIIPPTTIIOONN
            require a new binary format, which would not work with other
            implementations.
 
-       Finally, characters may be given as three octal digits after a \\.
+       Finally, characters may be given as three octal digits after a \\.
 
        A delay in milliseconds may appear anywhere in a string capability,
-       enclosed in $<..> brackets, as in eell=\EK$<5>, and padding characters
-       are supplied by _t_p_u_t_s to provide this delay.  The delay must be a
+       enclosed in $<..> brackets, as in eell=\EK$<5>, and padding characters
+       are supplied by _t_p_u_t_s to provide this delay.  The delay must be a
        number with at most one decimal place of precision; it may be followed
        by suffixes “*” or “/” or both.  A “*” indicates that the padding
        required is proportional to the number of lines affected by the
        operation, and the amount given is the per-affected-unit padding
        required.  (In the case of insert character, the factor is still the
-       number of _l_i_n_e_s affected.)  Normally, padding is advisory if the device
-       has the xxoonn capability; it is used for cost computation but does not
+       number of _l_i_n_e_s affected.)  Normally, padding is advisory if the device
+       has the xxoonn capability; it is used for cost computation but does not
        trigger delays.  A “/” suffix indicates that the padding is mandatory
        and forces a delay of the given number of milliseconds even on devices
-       for which xxoonn is present to indicate flow control.
+       for which xxoonn is present to indicate flow control.
 
        Sometimes individual capabilities must be commented out.  To do this,
        put a period before the capability name.  For example, see the second
-       iinndd in the example above.
+       iinndd in the example above.
 
-   FFeettcchhiinngg CCoommppiilleedd DDeessccrriippttiioonnss
-       The nnccuurrsseess library searches for terminal descriptions in several
+   FFeettcchhiinngg CCoommppiilleedd DDeessccrriippttiioonnss
+       The nnccuurrsseess library searches for terminal descriptions in several
        places.  It uses only the first description found.  The library has a
        compiled-in list of places to search which can be overridden by
-       environment variables.  Before starting to search, nnccuurrsseess eliminates
+       environment variables.  Before starting to search, nnccuurrsseess eliminates
        duplicates in its search list.
 
        •   If the environment variable TERMINFO is set, it is interpreted as
            the pathname of a directory containing the compiled description you
            are working on.  Only that directory is searched.
 
-       •   If TERMINFO is not set, nnccuurrsseess will instead look in the directory
-           $$HHOOMMEE//..tteerrmmiinnffoo for a compiled description.
+       •   If TERMINFO is not set, nnccuurrsseess will instead look in the directory
+           $$HHOOMMEE//..tteerrmmiinnffoo for a compiled description.
 
-       •   Next, if the environment variable TERMINFO_DIRS is set, nnccuurrsseess
+       •   Next, if the environment variable TERMINFO_DIRS is set, nnccuurrsseess
            will interpret the contents of that variable as a list of colon-
            separated directories (or database files) to be searched.
 
            An empty directory name (i.e., if the variable begins or ends with
            a colon, or contains adjacent colons) is interpreted as the system
-           location _/_u_s_r_/_s_h_a_r_e_/_t_e_r_m_i_n_f_o.
+           location _/_u_s_r_/_s_h_a_r_e_/_t_e_r_m_i_n_f_o.
 
-       •   Finally, nnccuurrsseess searches these compiled-in locations:
+       •   Finally, nnccuurrsseess searches these compiled-in locations:
 
            •   a list of directories (@TERMINFO_DIRS@), and
 
-           •   the system terminfo directory, _/_u_s_r_/_s_h_a_r_e_/_t_e_r_m_i_n_f_o (the
+           •   the system terminfo directory, _/_u_s_r_/_s_h_a_r_e_/_t_e_r_m_i_n_f_o (the
                compiled-in default).
 
-   PPrreeppaarriinngg DDeessccrriippttiioonnss
+   PPrreeppaarriinngg DDeessccrriippttiioonnss
        We now outline how to prepare descriptions of terminals.  The most
        effective way to prepare a terminal description is by imitating the
-       description of a similar terminal in _t_e_r_m_i_n_f_o and to build up a
-       description gradually, using partial descriptions with _v_i or some other
+       description of a similar terminal in _t_e_r_m_i_n_f_o and to build up a
+       description gradually, using partial descriptions with _v_i or some other
        screen-oriented program to check that they are correct.  Be aware that
        a very unusual terminal may expose deficiencies in the ability of the
-       _t_e_r_m_i_n_f_o file to describe it or bugs in the screen-handling code of the
+       _t_e_r_m_i_n_f_o file to describe it or bugs in the screen-handling code of the
        test program.
 
        To get the padding for insert line right (if the terminal manufacturer
@@ -1099,59 +1099,59 @@ DDEESSCCRRIIPPTTIIOONN
        “u” key several times quickly.  If the terminal messes up, more padding
        is usually needed.  A similar test can be used for insert character.
 
-   BBaassiicc CCaappaabbiilliittiieess
+   BBaassiicc CCaappaabbiilliittiieess
        The number of columns on each line for the terminal is given by the
-       ccoollss numeric capability.  If the terminal is a CRT, then the number of
-       lines on the screen is given by the lliinneess capability.  If the terminal
+       ccoollss numeric capability.  If the terminal is a CRT, then the number of
+       lines on the screen is given by the lliinneess capability.  If the terminal
        wraps around to the beginning of the next line when it reaches the
-       right margin, then it should have the aamm capability.  If the terminal
+       right margin, then it should have the aamm capability.  If the terminal
        can clear its screen, leaving the cursor in the home position, then
-       this is given by the cclleeaarr string capability.  If the terminal
+       this is given by the cclleeaarr string capability.  If the terminal
        overstrikes (rather than clearing a position when a character is struck
-       over) then it should have the ooss capability.  If the terminal is a
-       printing terminal, with no soft copy unit, give it both hhcc and ooss.  (ooss
+       over) then it should have the ooss capability.  If the terminal is a
+       printing terminal, with no soft copy unit, give it both hhcc and ooss.  (ooss
        applies to storage scope terminals, such as TEKTRONIX 4010 series, as
        well as hard copy and APL terminals.)  If there is a code to move the
-       cursor to the left edge of the current row, give this as ccrr.  (Normally
+       cursor to the left edge of the current row, give this as ccrr.  (Normally
        this will be carriage return, control M.)  If there is a code to
-       produce an audible signal (bell, beep, etc) give this as bbeell.
+       produce an audible signal (bell, beep, etc) give this as bbeell.
 
        If there is a code to move the cursor one position to the left (such as
-       backspace) that capability should be given as ccuubb11.  Similarly, codes
-       to move to the right, up, and down should be given as ccuuff11, ccuuuu11, and
-       ccuudd11.  These local cursor motions should not alter the text they pass
-       over, for example, you would not normally use “ccuuff11= ” because the
+       backspace) that capability should be given as ccuubb11.  Similarly, codes
+       to move to the right, up, and down should be given as ccuuff11, ccuuuu11, and
+       ccuudd11.  These local cursor motions should not alter the text they pass
+       over, for example, you would not normally use “ccuuff11= ” because the
        space would erase the character moved over.
 
        A very important point here is that the local cursor motions encoded in
-       _t_e_r_m_i_n_f_o are undefined at the left and top edges of a CRT terminal.
+       _t_e_r_m_i_n_f_o are undefined at the left and top edges of a CRT terminal.
        Programs should never attempt to backspace around the left edge, unless
-       bbww is given, and never attempt to go up locally off the top.  In order
+       bbww is given, and never attempt to go up locally off the top.  In order
        to scroll text up, a program will go to the bottom left corner of the
-       screen and send the iinndd (index) string.
+       screen and send the iinndd (index) string.
 
        To scroll text down, a program goes to the top left corner of the
-       screen and sends the rrii (reverse index) string.  The strings iinndd and rrii
+       screen and sends the rrii (reverse index) string.  The strings iinndd and rrii
        are undefined when not on their respective corners of the screen.
 
-       Parameterized versions of the scrolling sequences are iinnddnn and rriinn
-       which have the same semantics as iinndd and rrii except that they take one
+       Parameterized versions of the scrolling sequences are iinnddnn and rriinn
+       which have the same semantics as iinndd and rrii except that they take one
        parameter, and scroll that many lines.  They are also undefined except
        at the appropriate edge of the screen.
 
-       The aamm capability tells whether the cursor sticks at the right edge of
+       The aamm capability tells whether the cursor sticks at the right edge of
        the screen when text is output, but this does not necessarily apply to
-       a ccuuff11 from the last column.  The only local motion which is defined
-       from the left edge is if bbww is given, then a ccuubb11 from the left edge
-       will move to the right edge of the previous row.  If bbww is not given,
+       a ccuuff11 from the last column.  The only local motion which is defined
+       from the left edge is if bbww is given, then a ccuubb11 from the left edge
+       will move to the right edge of the previous row.  If bbww is not given,
        the effect is undefined.  This is useful for drawing a box around the
        edge of the screen, for example.  If the terminal has switch selectable
-       automatic margins, the _t_e_r_m_i_n_f_o file usually assumes that this is on;
-       i.e., aamm.  If the terminal has a command which moves to the first
-       column of the next line, that command can be given as nneell (newline).
+       automatic margins, the _t_e_r_m_i_n_f_o file usually assumes that this is on;
+       i.e., aamm.  If the terminal has a command which moves to the first
+       column of the next line, that command can be given as nneell (newline).
        It does not matter if the command clears the remainder of the current
-       line, so if the terminal has no ccrr and llff it may still be possible to
-       craft a working nneell out of one or both of them.
+       line, so if the terminal has no ccrr and llff it may still be possible to
+       craft a working nneell out of one or both of them.
 
        These capabilities suffice to describe hard-copy and “glass-tty”
        terminals.  Thus the model 33 teletype is described as
@@ -1165,113 +1165,113 @@ DDEESSCCRRIIPPTTIIOONN
                am, bel=^G, clear=^Z, cols#80, cr=^M, cub1=^H, cud1=^J,
                ind=^J, lines#24,
 
-   PPaarraammeetteerriizzeedd SSttrriinnggss
+   PPaarraammeetteerriizzeedd SSttrriinnggss
        Cursor addressing and other strings requiring parameters in the
        terminal are described by a parameterized string capability, with
-       _p_r_i_n_t_f-like escapes such as _%_x in it.  For example, to address the
-       cursor, the ccuupp capability is given, using two parameters: the row and
+       _p_r_i_n_t_f-like escapes such as _%_x in it.  For example, to address the
+       cursor, the ccuupp capability is given, using two parameters: the row and
        column to address to.  (Rows and columns are numbered from zero and
        refer to the physical screen visible to the user, not to any unseen
        memory.)  If the terminal has memory relative cursor addressing, that
-       can be indicated by mmrrccuupp.
+       can be indicated by mmrrccuupp.
 
-       The parameter mechanism uses a stack and special %% codes to manipulate
+       The parameter mechanism uses a stack and special %% codes to manipulate
        it.  Typically a sequence will push one of the parameters onto the
        stack and then print it in some format.  Print (e.g., "%d") is a
        special case.  Other operations, including "%t" pop their operand from
        the stack.  It is noted that more complex operations are often
-       necessary, e.g., in the ssggrr string.
+       necessary, e.g., in the ssggrr string.
 
-       The %% encodings have the following meanings:
+       The %% encodings have the following meanings:
 
-       %%%%   outputs “%”
+       %%%%   outputs “%”
 
-       %%_[_[:_]_f_l_a_g_s_]_[_w_i_d_t_h_[_._p_r_e_c_i_s_i_o_n_]_]_[ddooxxXXss_]
-            as in pprriinnttff, flags are _[_-_+_#_] and _s_p_a_c_e.  Use a “:” to allow the
+       %%_[_[:_]_f_l_a_g_s_]_[_w_i_d_t_h_[_._p_r_e_c_i_s_i_o_n_]_]_[ddooxxXXss_]
+            as in pprriinnttff, flags are _[_-_+_#_] and _s_p_a_c_e.  Use a “:” to allow the
             next character to be a “-” flag, avoiding interpreting "%-" as an
             operator.
 
-       %c   print pop() like %c in pprriinnttff
+       %c   print pop() like %c in pprriinnttff
 
-       %%ss   print pop() like %s in pprriinnttff
+       %%ss   print pop() like %s in pprriinnttff
 
-       %%pp_[_1_-_9_]
-            push _i'th parameter
+       %%pp_[_1_-_9_]
+            push _i'th parameter
 
-       %%PP_[_a_-_z_]
-            set dynamic variable _[_a_-_z_] to pop()
+       %%PP_[_a_-_z_]
+            set dynamic variable _[_a_-_z_] to pop()
 
-       %%gg_[_a_-_z_]_/
-            get dynamic variable _[_a_-_z_] and push it
+       %%gg_[_a_-_z_]_/
+            get dynamic variable _[_a_-_z_] and push it
 
-       %%PP_[_A_-_Z_]
-            set static variable _[_a_-_z_] to _p_o_p_(_)
+       %%PP_[_A_-_Z_]
+            set static variable _[_a_-_z_] to _p_o_p_(_)
 
-       %%gg_[_A_-_Z_]
-            get static variable _[_a_-_z_] and push it
+       %%gg_[_A_-_Z_]
+            get static variable _[_a_-_z_] and push it
 
             The terms "static" and "dynamic" are misleading.  Historically,
             these are simply two different sets of variables, whose values are
-            not reset between calls to ttppaarrmm.  However, that fact is not
+            not reset between calls to ttppaarrmm.  However, that fact is not
             documented in other implementations.  Relying on it will adversely
             impact portability to other implementations.
 
-       %%''_c'' char constant _c
+       %%''_c'' char constant _c
 
-       %%{{_n_n}}
-            integer constant _n_n
+       %%{{_n_n}}
+            integer constant _n_n
 
-       %%ll   push strlen(pop)
+       %%ll   push strlen(pop)
 
-       %%++, %%--, %%**, %%//, %%mm
-            arithmetic (%m is mod): _p_u_s_h_(_p_o_p_(_) _o_p _p_o_p_(_)_)
+       %%++, %%--, %%**, %%//, %%mm
+            arithmetic (%m is mod): _p_u_s_h_(_p_o_p_(_) _o_p _p_o_p_(_)_)
 
-       %%&&, %%||, %%^^
-            bit operations (AND, OR and exclusive-OR): _p_u_s_h_(_p_o_p_(_) _o_p _p_o_p_(_)_)
+       %%&&, %%||, %%^^
+            bit operations (AND, OR and exclusive-OR): _p_u_s_h_(_p_o_p_(_) _o_p _p_o_p_(_)_)
 
-       %%==, %%>>, %%<<
-            logical operations: _p_u_s_h_(_p_o_p_(_) _o_p _p_o_p_(_)_)
+       %%==, %%>>, %%<<
+            logical operations: _p_u_s_h_(_p_o_p_(_) _o_p _p_o_p_(_)_)
 
-       %%AA, %%OO
+       %%AA, %%OO
             logical AND and OR operations (for conditionals)
 
-       %%!!, %%~~
+       %%!!, %%~~
             unary operations (logical and bit complement): push(op pop())
 
-       %%ii   add 1 to first two parameters (for ANSI terminals)
+       %%ii   add 1 to first two parameters (for ANSI terminals)
 
-       %%?? _e_x_p_r %%tt _t_h_e_n_p_a_r_t %%ee _e_l_s_e_p_a_r_t %%;;
-            This forms an if-then-else.  The %%ee _e_l_s_e_p_a_r_t is optional.  Usually
-            the %%?? _e_x_p_r part pushes a value onto the stack, and %%tt pops it
+       %%?? _e_x_p_r %%tt _t_h_e_n_p_a_r_t %%ee _e_l_s_e_p_a_r_t %%;;
+            This forms an if-then-else.  The %%ee _e_l_s_e_p_a_r_t is optional.  Usually
+            the %%?? _e_x_p_r part pushes a value onto the stack, and %%tt pops it
             from the stack, testing if it is nonzero (true).  If it is zero
-            (false), control passes to the %%ee (else) part.
+            (false), control passes to the %%ee (else) part.
 
             It is possible to form else-if's a la Algol 68:
-            %%?? c1 %%tt b1 %%ee c2 %%tt b2 %%ee c3 %%tt b3 %%ee c4 %%tt b4 %%ee %%;;
+            %%?? c1 %%tt b1 %%ee c2 %%tt b2 %%ee c3 %%tt b3 %%ee c4 %%tt b4 %%ee %%;;
 
             where ci are conditions, bi are bodies.
 
-            Use the --ff option of ttiicc or iinnffooccmmpp to see the structure of if-
-            then-else's.  Some strings, e.g., ssggrr can be very complicated when
-            written on one line.  The --ff option splits the string into lines
+            Use the --ff option of ttiicc or iinnffooccmmpp to see the structure of if-
+            then-else's.  Some strings, e.g., ssggrr can be very complicated when
+            written on one line.  The --ff option splits the string into lines
             with the parts indented.
 
        Binary operations are in postfix form with the operands in the usual
-       order.  That is, to get x-5 one would use "%gx%{5}%-".  %%PP and %%gg
+       order.  That is, to get x-5 one would use "%gx%{5}%-".  %%PP and %%gg
        variables are persistent across escape-string evaluations.
 
        Consider the HP2645, which, to get to row 3 and column 12, needs to be
        sent \E&a12c03Y padded for 6 milliseconds.  Note that the order of the
        rows and columns is inverted here, and that the row and column are
-       printed as two digits.  Thus its ccuupp capability is
+       printed as two digits.  Thus its ccuupp capability is
        “cup=6\E&%p2%2dc%p1%2dY”.
 
        The Microterm ACT-IV needs the current row and column sent preceded by
-       a ^^TT, with the row and column simply encoded in binary,
+       a ^^TT, with the row and column simply encoded in binary,
        “cup=^T%p1%c%p2%c”.  Terminals which use “%c” need to be able to
-       backspace the cursor (ccuubb11), and to move the cursor up one line on the
-       screen (ccuuuu11).  This is necessary because it is not always safe to
-       transmit \\nn ^^DD and \\rr, as the system may change or discard them.  (The
+       backspace the cursor (ccuubb11), and to move the cursor up one line on the
+       screen (ccuuuu11).  This is necessary because it is not always safe to
+       transmit \\nn ^^DD and \\rr, as the system may change or discard them.  (The
        library routines dealing with terminfo set tty modes so that tabs are
        never expanded, so \t is safe to send.  This turns out to be essential
        for the Ann Arbor 4080.)
@@ -1284,71 +1284,71 @@ DDEESSCCRRIIPPTTIIOONN
        is done for the second parameter.  More complex arithmetic is possible
        using the stack.
 
-   CCuurrssoorr MMoottiioonnss
+   CCuurrssoorr MMoottiioonnss
        If the terminal has a fast way to home the cursor (to very upper left
-       corner of screen) then this can be given as hhoommee; similarly a fast way
-       of getting to the lower left-hand corner can be given as llll; this may
-       involve going up with ccuuuu11 from the home position, but a program should
-       never do this itself (unless llll does) because it can make no assumption
+       corner of screen) then this can be given as hhoommee; similarly a fast way
+       of getting to the lower left-hand corner can be given as llll; this may
+       involve going up with ccuuuu11 from the home position, but a program should
+       never do this itself (unless llll does) because it can make no assumption
        about the effect of moving up from the home position.  Note that the
        home position is the same as addressing to (0,0): to the top left
        corner of the screen, not of memory.  (Thus, the \EH sequence on HP
-       terminals cannot be used for hhoommee.)
+       terminals cannot be used for hhoommee.)
 
        If the terminal has row or column absolute cursor addressing, these can
-       be given as single parameter capabilities hhppaa (horizontal position
-       absolute) and vvppaa (vertical position absolute).  Sometimes these are
+       be given as single parameter capabilities hhppaa (horizontal position
+       absolute) and vvppaa (vertical position absolute).  Sometimes these are
        shorter than the more general two parameter sequence (as with the
-       hp2645) and can be used in preference to ccuupp.  If there are
-       parameterized local motions (e.g., move _n spaces to the right) these
-       can be given as ccuudd, ccuubb, ccuuff, and ccuuuu with a single parameter
+       hp2645) and can be used in preference to ccuupp.  If there are
+       parameterized local motions (e.g., move _n spaces to the right) these
+       can be given as ccuudd, ccuubb, ccuuff, and ccuuuu with a single parameter
        indicating how many spaces to move.  These are primarily useful if the
-       terminal does not have ccuupp, such as the TEKTRONIX 4025.
+       terminal does not have ccuupp, such as the TEKTRONIX 4025.
 
        If the terminal needs to be in a special mode when running a program
        that uses these capabilities, the codes to enter and exit this mode can
-       be given as ssmmccuupp and rrmmccuupp.  This arises, for example, from terminals
+       be given as ssmmccuupp and rrmmccuupp.  This arises, for example, from terminals
        like the Concept with more than one page of memory.  If the terminal
        has only memory relative cursor addressing and not screen relative
        cursor addressing, a one screen-sized window must be fixed into the
        terminal for cursor addressing to work properly.  This is also used for
-       the TEKTRONIX 4025, where ssmmccuupp sets the command character to be the
-       one used by terminfo.  If the ssmmccuupp sequence will not restore the
-       screen after an rrmmccuupp sequence is output (to the state prior to
-       outputting rrmmccuupp), specify nnrrrrmmcc.
+       the TEKTRONIX 4025, where ssmmccuupp sets the command character to be the
+       one used by terminfo.  If the ssmmccuupp sequence will not restore the
+       screen after an rrmmccuupp sequence is output (to the state prior to
+       outputting rrmmccuupp), specify nnrrrrmmcc.
 
-   AArreeaa CClleeaarrss
+   AArreeaa CClleeaarrss
        If the terminal can clear from the current position to the end of the
-       line, leaving the cursor where it is, this should be given as eell.  If
+       line, leaving the cursor where it is, this should be given as eell.  If
        the terminal can clear from the beginning of the line to the current
        position inclusive, leaving the cursor where it is, this should be
-       given as eell11.  If the terminal can clear from the current position to
-       the end of the display, then this should be given as eedd.  EEdd is only
+       given as eell11.  If the terminal can clear from the current position to
+       the end of the display, then this should be given as eedd.  EEdd is only
        defined from the first column of a line.  (Thus, it can be simulated by
-       a request to delete a large number of lines, if a true eedd is not
+       a request to delete a large number of lines, if a true eedd is not
        available.)
 
-   IInnsseerrtt//ddeelleettee lliinnee aanndd vveerrttiiccaall mmoottiioonnss
+   IInnsseerrtt//ddeelleettee lliinnee aanndd vveerrttiiccaall mmoottiioonnss
        If the terminal can open a new blank line before the line where the
-       cursor is, this should be given as iill11; this is done only from the
+       cursor is, this should be given as iill11; this is done only from the
        first position of a line.  The cursor must then appear on the newly
        blank line.  If the terminal can delete the line which the cursor is
-       on, then this should be given as ddll11; this is done only from the first
-       position on the line to be deleted.  Versions of iill11 and ddll11 which take
+       on, then this should be given as ddll11; this is done only from the first
+       position on the line to be deleted.  Versions of iill11 and ddll11 which take
        a single parameter and insert or delete that many lines can be given as
-       iill and ddll.
+       iill and ddll.
 
        If the terminal has a settable scrolling region (like the vt100) the
-       command to set this can be described with the ccssrr capability, which
+       command to set this can be described with the ccssrr capability, which
        takes two parameters: the top and bottom lines of the scrolling region.
        The cursor position is, alas, undefined after using this command.
 
-       It is possible to get the effect of insert or delete line using ccssrr on
-       a properly chosen region; the sscc and rrcc (save and restore cursor)
+       It is possible to get the effect of insert or delete line using ccssrr on
+       a properly chosen region; the sscc and rrcc (save and restore cursor)
        commands may be useful for ensuring that your synthesized insert/delete
-       string does not move the cursor.  (Note that the nnccuurrsseess(3X) library
+       string does not move the cursor.  (Note that the nnccuurrsseess(3X) library
        does this synthesis automatically, so you need not compose
-       insert/delete strings for an entry with ccssrr).
+       insert/delete strings for an entry with ccssrr).
 
        Yet another way to construct insert and delete might be to use a
        combination of index with the memory-lock feature found on some
@@ -1356,35 +1356,35 @@ DDEESSCCRRIIPPTTIIOONN
        insert/delete).
 
        Inserting lines at the top or bottom of the screen can also be done
-       using rrii or iinndd on many terminals without a true insert/delete line,
+       using rrii or iinndd on many terminals without a true insert/delete line,
        and is often faster even on terminals with those features.
 
-       The boolean nnoonn__ddeesstt__ssccrroollll__rreeggiioonn should be set if each scrolling
+       The boolean nnoonn__ddeesstt__ssccrroollll__rreeggiioonn should be set if each scrolling
        window is effectively a view port on a screen-sized canvas.  To test
        for this capability, create a scrolling region in the middle of the
        screen, write something to the bottom line, move the cursor to the top
-       of the region, and do rrii followed by ddll11 or iinndd.  If the data scrolled
-       off the bottom of the region by the rrii re-appears, then scrolling is
-       non-destructive.  System V and XSI Curses expect that iinndd, rrii, iinnddnn,
-       and rriinn will simulate destructive scrolling; their documentation
-       cautions you not to define ccssrr unless this is true.  This ccuurrsseess
+       of the region, and do rrii followed by ddll11 or iinndd.  If the data scrolled
+       off the bottom of the region by the rrii re-appears, then scrolling is
+       non-destructive.  System V and XSI Curses expect that iinndd, rrii, iinnddnn,
+       and rriinn will simulate destructive scrolling; their documentation
+       cautions you not to define ccssrr unless this is true.  This ccuurrsseess
        implementation is more liberal and will do explicit erases after
-       scrolling if nnddssttrr is defined.
+       scrolling if nnddssttrr is defined.
 
        If the terminal has the ability to define a window as part of memory,
        which all commands affect, it should be given as the parameterized
-       string wwiinndd.  The four parameters are the starting and ending lines in
+       string wwiinndd.  The four parameters are the starting and ending lines in
        memory and the starting and ending columns in memory, in that order.
 
-       If the terminal can retain display memory above, then the ddaa capability
-       should be given; if display memory can be retained below, then ddbb
+       If the terminal can retain display memory above, then the ddaa capability
+       should be given; if display memory can be retained below, then ddbb
        should be given.  These indicate that deleting a line or scrolling may
-       bring non-blank lines up from below or that scrolling back with rrii may
+       bring non-blank lines up from below or that scrolling back with rrii may
        bring down non-blank lines.
 
-   IInnsseerrtt//DDeelleettee CChhaarraacctteerr
+   IInnsseerrtt//DDeelleettee CChhaarraacctteerr
        There are two basic kinds of intelligent terminals with respect to
-       insert/delete character which can be described using _t_e_r_m_i_n_f_o_.  The
+       insert/delete character which can be described using _t_e_r_m_i_n_f_o_.  The
        most common insert/delete character operations affect only the
        characters on the current line and shift characters off the end of the
        line rigidly.  Other terminals, such as the Concept 100 and the Perkin
@@ -1402,7 +1402,7 @@ DDEESSCCRRIIPPTTIIOONN
        does not distinguish between blanks and untyped positions.  If the
        “abc” shifts over to the “def” which then move together around the end
        of the current line and onto the next as you insert, you have the
-       second type of terminal, and should give the capability iinn, which
+       second type of terminal, and should give the capability iinn, which
        stands for “insert null”.
 
        While these are two logically separate attributes (one line versus
@@ -1412,87 +1412,87 @@ DDEESSCCRRIIPPTTIIOONN
 
        Terminfo can describe both terminals which have an insert mode, and
        terminals which send a simple sequence to open a blank position on the
-       current line.  Give as ssmmiirr the sequence to get into insert mode.  Give
-       as rrmmiirr the sequence to leave insert mode.  Now give as iicchh11 any
+       current line.  Give as ssmmiirr the sequence to get into insert mode.  Give
+       as rrmmiirr the sequence to leave insert mode.  Now give as iicchh11 any
        sequence needed to be sent just before sending the character to be
-       inserted.  Most terminals with a true insert mode will not give iicchh11;
+       inserted.  Most terminals with a true insert mode will not give iicchh11;
        terminals which send a sequence to open a screen position should give
        it here.
 
-       If your terminal has both, insert mode is usually preferable to iicchh11.
+       If your terminal has both, insert mode is usually preferable to iicchh11.
        Technically, you should not give both unless the terminal actually
        requires both to be used in combination.  Accordingly, some non-curses
        applications get confused if both are present; the symptom is doubled
        characters in an update using insert.  This requirement is now rare;
-       most iicchh sequences do not require previous smir, and most smir insert
-       modes do not require iicchh11 before each character.  Therefore, the new
-       ccuurrsseess actually assumes this is the case and uses either rrmmiirr/ssmmiirr or
-       iicchh/iicchh11 as appropriate (but not both).  If you have to write an entry
+       most iicchh sequences do not require previous smir, and most smir insert
+       modes do not require iicchh11 before each character.  Therefore, the new
+       ccuurrsseess actually assumes this is the case and uses either rrmmiirr/ssmmiirr or
+       iicchh/iicchh11 as appropriate (but not both).  If you have to write an entry
        to be used under new curses for a terminal old enough to need both,
-       include the rrmmiirr/ssmmiirr sequences in iicchh11.
+       include the rrmmiirr/ssmmiirr sequences in iicchh11.
 
        If post insert padding is needed, give this as a number of milliseconds
-       in iipp (a string option).  Any other sequence which may need to be sent
-       after an insert of a single character may also be given in iipp.  If your
+       in iipp (a string option).  Any other sequence which may need to be sent
+       after an insert of a single character may also be given in iipp.  If your
        terminal needs both to be placed into an “insert mode” and a special
-       code to precede each inserted character, then both ssmmiirr/rrmmiirr and iicchh11
-       can be given, and both will be used.  The iicchh capability, with one
-       parameter, _n, will repeat the effects of iicchh11 _n times.
+       code to precede each inserted character, then both ssmmiirr/rrmmiirr and iicchh11
+       can be given, and both will be used.  The iicchh capability, with one
+       parameter, _n, will repeat the effects of iicchh11 _n times.
 
        If padding is necessary between characters typed while not in insert
-       mode, give this as a number of milliseconds padding in rrmmpp.
+       mode, give this as a number of milliseconds padding in rrmmpp.
 
        It is occasionally necessary to move around while in insert mode to
        delete characters on the same line (e.g., if there is a tab after the
        insertion position).  If your terminal allows motion while in insert
-       mode you can give the capability mmiirr to speed up inserting in this
-       case.  Omitting mmiirr will affect only speed.  Some terminals (notably
-       Datamedia's) must not have mmiirr because of the way their insert mode
+       mode you can give the capability mmiirr to speed up inserting in this
+       case.  Omitting mmiirr will affect only speed.  Some terminals (notably
+       Datamedia's) must not have mmiirr because of the way their insert mode
        works.
 
-       Finally, you can specify ddcchh11 to delete a single character, ddcchh with
-       one parameter, _n, to delete _n _c_h_a_r_a_c_t_e_r_s_, and delete mode by giving
-       ssmmddcc and rrmmddcc to enter and exit delete mode (any mode the terminal
-       needs to be placed in for ddcchh11 to work).
+       Finally, you can specify ddcchh11 to delete a single character, ddcchh with
+       one parameter, _n, to delete _n _c_h_a_r_a_c_t_e_r_s_, and delete mode by giving
+       ssmmddcc and rrmmddcc to enter and exit delete mode (any mode the terminal
+       needs to be placed in for ddcchh11 to work).
 
-       A command to erase _n characters (equivalent to outputting _n blanks
-       without moving the cursor) can be given as eecchh with one parameter.
+       A command to erase _n characters (equivalent to outputting _n blanks
+       without moving the cursor) can be given as eecchh with one parameter.
 
-   HHiigghhlliigghhttiinngg,, UUnnddeerrlliinniinngg,, aanndd VViissiibbllee BBeellllss
+   HHiigghhlliigghhttiinngg,, UUnnddeerrlliinniinngg,, aanndd VViissiibbllee BBeellllss
        If your terminal has one or more kinds of display attributes, these can
        be represented in a number of different ways.  You should choose one
-       display form as _s_t_a_n_d_o_u_t _m_o_d_e, representing a good, high contrast,
+       display form as _s_t_a_n_d_o_u_t _m_o_d_e, representing a good, high contrast,
        easy-on-the-eyes, format for highlighting error messages and other
        attention getters.  (If you have a choice, reverse video plus half-
        bright is good, or reverse video alone.)  The sequences to enter and
-       exit standout mode are given as ssmmssoo and rrmmssoo, respectively.  If the
+       exit standout mode are given as ssmmssoo and rrmmssoo, respectively.  If the
        code to change into or out of standout mode leaves one or even two
        blank spaces on the screen, as the TVI 912 and Teleray 1061 do, then
-       xxmmcc should be given to tell how many spaces are left.
+       xxmmcc should be given to tell how many spaces are left.
 
-       Codes to begin underlining and end underlining can be given as ssmmuull and
-       rrmmuull respectively.  If the terminal has a code to underline the current
+       Codes to begin underlining and end underlining can be given as ssmmuull and
+       rrmmuull respectively.  If the terminal has a code to underline the current
        character and move the cursor one space to the right, such as the
-       Microterm Mime, this can be given as uucc.
+       Microterm Mime, this can be given as uucc.
 
-       Other capabilities to enter various highlighting modes include bblliinnkk
-       (blinking) bboolldd (bold or extra bright) ddiimm (dim or half-bright) iinnvviiss
-       (blanking or invisible text) pprroott (protected) rreevv (reverse video) ssggrr00
-       (turn off _a_l_l attribute modes) ssmmaaccss (enter alternate character set
-       mode) and rrmmaaccss (exit alternate character set mode).  Turning on any of
+       Other capabilities to enter various highlighting modes include bblliinnkk
+       (blinking) bboolldd (bold or extra bright) ddiimm (dim or half-bright) iinnvviiss
+       (blanking or invisible text) pprroott (protected) rreevv (reverse video) ssggrr00
+       (turn off _a_l_l attribute modes) ssmmaaccss (enter alternate character set
+       mode) and rrmmaaccss (exit alternate character set mode).  Turning on any of
        these modes singly may or may not turn off other modes.
 
        If there is a sequence to set arbitrary combinations of modes, this
-       should be given as ssggrr (set attributes), taking 9 parameters.  Each
+       should be given as ssggrr (set attributes), taking 9 parameters.  Each
        parameter is either 0 or nonzero, as the corresponding attribute is on
        or off.  The 9 parameters are, in order: standout, underline, reverse,
        blink, dim, bold, blank, protect, alternate character set.  Not all
-       modes need be supported by ssggrr, only those for which corresponding
+       modes need be supported by ssggrr, only those for which corresponding
        separate attribute commands exist.
 
        For example, the DEC vt220 supports most of the modes:
 
-              ttppaarrmm ppaarraammeetteerr      aattttrriibbuuttee        eessccaappee sseeqquueennccee
+              ttppaarrmm ppaarraammeetteerr      aattttrriibbuuttee        eessccaappee sseeqquueennccee
 
               none                 none             \E[0m
               p1                   standout         \E[0;1;7m
@@ -1520,7 +1520,7 @@ DDEESSCCRRIIPPTTIIOONN
 
        Writing out the above sequences, along with their dependencies yields
 
-            sseeqquueennccee             wwhheenn ttoo oouuttppuutt      tteerrmmiinnffoo ttrraannssllaattiioonn
+            sseeqquueennccee             wwhheenn ttoo oouuttppuutt      tteerrmmiinnffoo ttrraannssllaattiioonn
 
             \E[0                 always              \E[0
             ;1                   if p1 or p6         %?%p1%p6%|%t;1%;
@@ -1543,174 +1543,174 @@ DDEESSCCRRIIPPTTIIOONN
        string.  The only drawback to adding an sgr string is that termcap also
        assumes that sgr0 does not exit alternate character set mode.
 
-       Terminals with the “magic cookie” glitch (xxmmcc) deposit special
+       Terminals with the “magic cookie” glitch (xxmmcc) deposit special
        “cookies” when they receive mode-setting sequences, which affect the
        display algorithm rather than having extra bits for each character.
        Some terminals, such as the HP 2621, automatically leave standout mode
        when they move to a new line or the cursor is addressed.  Programs
        using standout mode should exit standout mode before moving the cursor
-       or sending a newline, unless the mmssggrr capability, asserting that it is
+       or sending a newline, unless the mmssggrr capability, asserting that it is
        safe to move in standout mode, is present.
 
        If the terminal has a way of flashing the screen to indicate an error
-       quietly (a bell replacement) then this can be given as ffllaasshh; it must
+       quietly (a bell replacement) then this can be given as ffllaasshh; it must
        not move the cursor.
 
        If the cursor needs to be made more visible than normal when it is not
        on the bottom line (to make, for example, a non-blinking underline into
        an easier to find block or blinking underline) give this sequence as
-       ccvvvviiss.  If there is a way to make the cursor completely invisible, give
-       that as cciivviiss.  The capability ccnnoorrmm should be given which undoes the
+       ccvvvviiss.  If there is a way to make the cursor completely invisible, give
+       that as cciivviiss.  The capability ccnnoorrmm should be given which undoes the
        effects of both of these modes.
 
        If your terminal correctly generates underlined characters (with no
        special codes needed) even though it does not overstrike, then you
-       should give the capability uull.  If a character overstriking another
-       leaves both characters on the screen, specify the capability ooss.  If
+       should give the capability uull.  If a character overstriking another
+       leaves both characters on the screen, specify the capability ooss.  If
        overstrikes are erasable with a blank, then this should be indicated by
-       giving eeoo.
+       giving eeoo.
 
-   KKeeyyppaadd aanndd FFuunnccttiioonn KKeeyyss
+   KKeeyyppaadd aanndd FFuunnccttiioonn KKeeyyss
        If the terminal has a keypad that transmits codes when the keys are
        pressed, this information can be given.  Note that it is not possible
        to handle terminals where the keypad only works in local (this applies,
        for example, to the unshifted HP 2621 keys).  If the keypad can be set
-       to transmit or not transmit, give these codes as ssmmkkxx and rrmmkkxx.
+       to transmit or not transmit, give these codes as ssmmkkxx and rrmmkkxx.
        Otherwise the keypad is assumed to always transmit.
 
        The codes sent by the left arrow, right arrow, up arrow, down arrow,
-       and home keys can be given as kkccuubb11,, kkccuuff11,, kkccuuuu11,, kkccuudd11,, and kkhhoommee
+       and home keys can be given as kkccuubb11,, kkccuuff11,, kkccuuuu11,, kkccuudd11,, and kkhhoommee
        respectively.  If there are function keys such as f0, f1, ..., f10, the
-       codes they send can be given as kkff00,, kkff11,, ......,, kkff1100.  If these keys
+       codes they send can be given as kkff00,, kkff11,, ......,, kkff1100.  If these keys
        have labels other than the default f0 through f10, the labels can be
-       given as llff00,, llff11,, ......,, llff1100.
+       given as llff00,, llff11,, ......,, llff1100.
 
        The codes transmitted by certain other special keys can be given:
 
-       •   kkllll (home down),
+       •   kkllll (home down),
 
-       •   kkbbss (backspace),
+       •   kkbbss (backspace),
 
-       •   kkttbbcc (clear all tabs),
+       •   kkttbbcc (clear all tabs),
 
-       •   kkccttaabb (clear the tab stop in this column),
+       •   kkccttaabb (clear the tab stop in this column),
 
-       •   kkccllrr (clear screen or erase key),
+       •   kkccllrr (clear screen or erase key),
 
-       •   kkddcchh11 (delete character),
+       •   kkddcchh11 (delete character),
 
-       •   kkddll11 (delete line),
+       •   kkddll11 (delete line),
 
-       •   kkrrmmiirr (exit insert mode),
+       •   kkrrmmiirr (exit insert mode),
 
-       •   kkeell (clear to end of line),
+       •   kkeell (clear to end of line),
 
-       •   kkeedd (clear to end of screen),
+       •   kkeedd (clear to end of screen),
 
-       •   kkiicchh11 (insert character or enter insert mode),
+       •   kkiicchh11 (insert character or enter insert mode),
 
-       •   kkiill11 (insert line),
+       •   kkiill11 (insert line),
 
-       •   kknnpp (next page),
+       •   kknnpp (next page),
 
-       •   kkpppp (previous page),
+       •   kkpppp (previous page),
 
-       •   kkiinndd (scroll forward/down),
+       •   kkiinndd (scroll forward/down),
 
-       •   kkrrii (scroll backward/up),
+       •   kkrrii (scroll backward/up),
 
-       •   kkhhttss (set a tab stop in this column).
+       •   kkhhttss (set a tab stop in this column).
 
        In addition, if the keypad has a 3 by 3 array of keys including the
-       four arrow keys, the other five keys can be given as kkaa11, kkaa33, kkbb22,
-       kkcc11, and kkcc33.  These keys are useful when the effects of a 3 by 3
+       four arrow keys, the other five keys can be given as kkaa11, kkaa33, kkbb22,
+       kkcc11, and kkcc33.  These keys are useful when the effects of a 3 by 3
        directional pad are needed.
 
-       Strings to program function keys can be given as ppffkkeeyy, ppfflloocc, and ppffxx.
-       A string to program screen labels should be specified as ppllnn.  Each of
+       Strings to program function keys can be given as ppffkkeeyy, ppfflloocc, and ppffxx.
+       A string to program screen labels should be specified as ppllnn.  Each of
        these strings takes two parameters: the function key number to program
        (from 0 to 10) and the string to program it with.  Function key numbers
        out of this range may program undefined keys in a terminal dependent
-       manner.  The difference between the capabilities is that ppffkkeeyy causes
+       manner.  The difference between the capabilities is that ppffkkeeyy causes
        pressing the given key to be the same as the user typing the given
-       string; ppfflloocc causes the string to be executed by the terminal in
-       local; and ppffxx causes the string to be transmitted to the computer.
+       string; ppfflloocc causes the string to be executed by the terminal in
+       local; and ppffxx causes the string to be transmitted to the computer.
 
-       The capabilities nnllaabb, llww and llhh define the number of programmable
+       The capabilities nnllaabb, llww and llhh define the number of programmable
        screen labels and their width and height.  If there are commands to
-       turn the labels on and off, give them in ssmmllnn and rrmmllnn.  ssmmllnn is
+       turn the labels on and off, give them in ssmmllnn and rrmmllnn.  ssmmllnn is
        normally output after one or more pln sequences to make sure that the
        change becomes visible.
 
-   TTaabbss aanndd IInniittiiaalliizzaattiioonn
+   TTaabbss aanndd IInniittiiaalliizzaattiioonn
        If the terminal has hardware tabs, the command to advance to the next
-       tab stop can be given as hhtt (usually control I).  A “back-tab” command
-       which moves leftward to the preceding tab stop can be given as ccbbtt.  By
+       tab stop can be given as hhtt (usually control I).  A “back-tab” command
+       which moves leftward to the preceding tab stop can be given as ccbbtt.  By
        convention, if the teletype modes indicate that tabs are being expanded
        by the computer rather than being sent to the terminal, programs should
-       not use hhtt or ccbbtt even if they are present, since the user may not have
+       not use hhtt or ccbbtt even if they are present, since the user may not have
        the tab stops properly set.  If the terminal has hardware tabs which
-       are initially set every _n spaces when the terminal is powered up, the
-       numeric parameter iitt is given, showing the number of spaces the tabs
-       are set to.  This is normally used by the _@_T_S_E_T_@ command to determine
+       are initially set every _n spaces when the terminal is powered up, the
+       numeric parameter iitt is given, showing the number of spaces the tabs
+       are set to.  This is normally used by the _@_T_S_E_T_@ command to determine
        whether to set the mode for hardware tab expansion, and whether to set
        the tab stops.  If the terminal has tab stops that can be saved in non-
        volatile memory, the terminfo description can assume that they are
        properly set.
 
-       Other capabilities include iiss11, iiss22, and iiss33, initialization strings
-       for the terminal, iipprroogg, the path name of a program to be run to
-       initialize the terminal, and iiff, the name of a file containing long
+       Other capabilities include iiss11, iiss22, and iiss33, initialization strings
+       for the terminal, iipprroogg, the path name of a program to be run to
+       initialize the terminal, and iiff, the name of a file containing long
        initialization strings.  These strings are expected to set the terminal
        into modes consistent with the rest of the terminfo description.  They
-       are normally sent to the terminal, by the _i_n_i_t option of the _t_p_u_t
+       are normally sent to the terminal, by the _i_n_i_t option of the _t_p_u_t
        program, each time the user logs in.  They will be printed in the
        following order:
 
               run the program
-                     iipprroogg
+                     iipprroogg
 
-              output iiss11 iiss22
+              output iiss11 iiss22
 
               set the margins using
-                     mmggcc, ssmmggll and ssmmggrr
+                     mmggcc, ssmmggll and ssmmggrr
 
               set tabs using
-                     ttbbcc and hhttss
+                     ttbbcc and hhttss
 
               print the file
-                     iiff
+                     iiff
 
               and finally
-                     output iiss33.
+                     output iiss33.
 
-       Most initialization is done with iiss22.  Special terminal modes can be
+       Most initialization is done with iiss22.  Special terminal modes can be
        set up without duplicating strings by putting the common sequences in
-       iiss22 and special cases in iiss11 and iiss33.
+       iiss22 and special cases in iiss11 and iiss33.
 
        A set of sequences that does a harder reset from a totally unknown
-       state can be given as rrss11, rrss22, rrff and rrss33, analogous to iiss11 ,, iiss22 ,, iiff
-       and iiss33 respectively.  These strings are output by the _r_e_s_e_t program,
+       state can be given as rrss11, rrss22, rrff and rrss33, analogous to iiss11 ,, iiss22 ,, iiff
+       and iiss33 respectively.  These strings are output by the _r_e_s_e_t program,
        which is used when the terminal gets into a wedged state.  Commands are
-       normally placed in rrss11, rrss22 rrss33 and rrff only if they produce annoying
+       normally placed in rrss11, rrss22 rrss33 and rrff only if they produce annoying
        effects on the screen and are not necessary when logging in.  For
        example, the command to set the vt100 into 80-column mode would
-       normally be part of iiss22, but it causes an annoying glitch of the screen
+       normally be part of iiss22, but it causes an annoying glitch of the screen
        and is not normally needed since the terminal is usually already in 80
        column mode.
 
-       The _r_e_s_e_t program writes strings including iipprroogg, etc., in the same
-       order as the _i_n_i_t program, using rrss11, etc., instead of iiss11, etc.  If
-       any of rrss11, rrss22, rrss33, or rrff reset capability strings are missing, the
-       _r_e_s_e_t program falls back upon the corresponding initialization
+       The _r_e_s_e_t program writes strings including iipprroogg, etc., in the same
+       order as the _i_n_i_t program, using rrss11, etc., instead of iiss11, etc.  If
+       any of rrss11, rrss22, rrss33, or rrff reset capability strings are missing, the
+       _r_e_s_e_t program falls back upon the corresponding initialization
        capability string.
 
        If there are commands to set and clear tab stops, they can be given as
-       ttbbcc (clear all tab stops) and hhttss (set a tab stop in the current column
+       ttbbcc (clear all tab stops) and hhttss (set a tab stop in the current column
        of every row).  If a more complex sequence is needed to set the tabs
-       than can be described by this, the sequence can be placed in iiss22 or iiff.
+       than can be described by this, the sequence can be placed in iiss22 or iiff.
 
-   DDeellaayyss aanndd PPaaddddiinngg
+   DDeellaayyss aanndd PPaaddddiinngg
        Many older and slower terminals do not support either XON/XOFF or DTR
        handshaking, including hard copy terminals and some very archaic CRTs
        (including, for example, DEC VT100s).  These may require padding
@@ -1718,59 +1718,59 @@ DDEESSCCRRIIPPTTIIOONN
 
        If the terminal uses xon/xoff handshaking for flow control (that is, it
        automatically emits ^S back to the host when its input buffers are
-       close to full), set xxoonn.  This capability suppresses the emission of
+       close to full), set xxoonn.  This capability suppresses the emission of
        padding.  You can also set it for memory-mapped console devices
        effectively that do not have a speed limit.  Padding information should
        still be included so that routines can make better decisions about
        relative costs, but actual pad characters will not be transmitted.
 
-       If ppbb (padding baud rate) is given, padding is suppressed at baud rates
-       below the value of ppbb.  If the entry has no padding baud rate, then
-       whether padding is emitted or not is completely controlled by xxoonn.
+       If ppbb (padding baud rate) is given, padding is suppressed at baud rates
+       below the value of ppbb.  If the entry has no padding baud rate, then
+       whether padding is emitted or not is completely controlled by xxoonn.
 
        If the terminal requires other than a null (zero) character as a pad,
-       then this can be given as ppaadd.  Only the first character of the ppaadd
+       then this can be given as ppaadd.  Only the first character of the ppaadd
        string is used.
 
-   SSttaattuuss LLiinneess
+   SSttaattuuss LLiinneess
        Some terminals have an extra “status line” which is not normally used
-       by software (and thus not counted in the terminal's lliinneess capability).
+       by software (and thus not counted in the terminal's lliinneess capability).
 
        The simplest case is a status line which is cursor-addressable but not
        part of the main scrolling region on the screen; the Heathkit H19 has a
        status line of this kind, as would a 24-line VT100 with a 23-line
        scrolling region set up on initialization.  This situation is indicated
-       by the hhss capability.
+       by the hhss capability.
 
        Some terminals with status lines need special sequences to access the
        status line.  These may be expressed as a string with single parameter
-       ttssll which takes the cursor to a given zero-origin column on the status
-       line.  The capability ffssll must return to the main-screen cursor
-       positions before the last ttssll.  You may need to embed the string values
-       of sscc (save cursor) and rrcc (restore cursor) in ttssll and ffssll to
+       ttssll which takes the cursor to a given zero-origin column on the status
+       line.  The capability ffssll must return to the main-screen cursor
+       positions before the last ttssll.  You may need to embed the string values
+       of sscc (save cursor) and rrcc (restore cursor) in ttssll and ffssll to
        accomplish this.
 
        The status line is normally assumed to be the same width as the width
        of the terminal.  If this is untrue, you can specify it with the
-       numeric capability wwssll.
+       numeric capability wwssll.
 
-       A command to erase or blank the status line may be specified as ddssll.
+       A command to erase or blank the status line may be specified as ddssll.
 
-       The boolean capability eessllookk specifies that escape sequences, tabs,
+       The boolean capability eessllookk specifies that escape sequences, tabs,
        etc., work ordinarily in the status line.
 
-       The nnccuurrsseess implementation does not yet use any of these capabilities.
+       The nnccuurrsseess implementation does not yet use any of these capabilities.
        They are documented here in case they ever become important.
 
-   LLiinnee GGrraapphhiiccss
+   LLiinnee GGrraapphhiiccss
        Many terminals have alternate character sets useful for forms-drawing.
-       Terminfo and ccuurrsseess build in support for the drawing characters
+       Terminfo and ccuurrsseess build in support for the drawing characters
        supported by the VT100, with some characters from the AT&T 4410v1
-       added.  This alternate character set may be specified by the aaccsscc
+       added.  This alternate character set may be specified by the aaccsscc
        capability.
 
-             GGllyypphh                       AACCSS            AAsscciiii     VVTT110000
-             NNaammee                        NNaammee           DDeeffaauulltt   NNaammee
+             GGllyypphh                       AACCSS            AAsscciiii     VVTT110000
+             NNaammee                        NNaammee           DDeeffaauulltt   NNaammee
              UK pound sign               ACS_STERLING   f         }
              arrow pointing down         ACS_DARROW     v         .
              arrow pointing left         ACS_LARROW     <         ,
@@ -1806,11 +1806,11 @@ DDEESSCCRRIIPPTTIIOONN
 
        The best way to define a new device's graphics set is to add a column
        to a copy of this table for your terminal, giving the character which
-       (when emitted between ssmmaaccss/rrmmaaccss switches) will be rendered as the
+       (when emitted between ssmmaaccss/rrmmaaccss switches) will be rendered as the
        corresponding graphic.  Then read off the VT100/your terminal character
        pairs right to left in sequence; these become the ACSC string.
 
-   CCoolloorr HHaannddlliinngg
+   CCoolloorr HHaannddlliinngg
        Most color terminals are either “Tektronix-like” or “HP-like”.
        Tektronix-like terminals have a predefined set of N colors (where N
        usually 8), and can set character-cell foreground and background
@@ -1821,82 +1821,82 @@ DDEESSCCRRIIPPTTIIOONN
        terminals are Tektronix-like.
 
        Some basic color capabilities are independent of the color method.  The
-       numeric capabilities ccoolloorrss and ppaaiirrss specify the maximum numbers of
-       colors and color-pairs that can be displayed simultaneously.  The oopp
+       numeric capabilities ccoolloorrss and ppaaiirrss specify the maximum numbers of
+       colors and color-pairs that can be displayed simultaneously.  The oopp
        (original pair) string resets foreground and background colors to their
-       default values for the terminal.  The oocc string resets all colors or
+       default values for the terminal.  The oocc string resets all colors or
        color-pairs to their default values for the terminal.  Some terminals
        (including many PC terminal emulators) erase screen areas with the
        current background color rather than the power-up default background;
-       these should have the boolean capability bbccee.
+       these should have the boolean capability bbccee.
 
        To change the current foreground or background color on a Tektronix-
-       type terminal, use sseettaaff (set ANSI foreground) and sseettaabb (set ANSI
-       background) or sseettff (set foreground) and sseettbb (set background).  These
+       type terminal, use sseettaaff (set ANSI foreground) and sseettaabb (set ANSI
+       background) or sseettff (set foreground) and sseettbb (set background).  These
        take one parameter, the color number.  The SVr4 documentation describes
-       only sseettaaff/sseettaabb; the XPG4 draft says that "If the terminal supports
+       only sseettaaff/sseettaabb; the XPG4 draft says that "If the terminal supports
        ANSI escape sequences to set background and foreground, they should be
-       coded as sseettaaff and sseettaabb, respectively.  If the terminal supports other
+       coded as sseettaaff and sseettaabb, respectively.  If the terminal supports other
        escape sequences to set background and foreground, they should be coded
-       as sseettff and sseettbb, respectively.  The _v_i_d_p_u_t_s_(_) function and the refresh
-       functions use sseettaaff and sseettaabb if they are defined."
+       as sseettff and sseettbb, respectively.  The _v_i_d_p_u_t_s_(_) function and the refresh
+       functions use sseettaaff and sseettaabb if they are defined."
 
-       The sseettaaff/sseettaabb and sseettff/sseettbb capabilities take a single numeric
-       argument each.  Argument values 0-7 of sseettaaff/sseettaabb are portably defined
+       The sseettaaff/sseettaabb and sseettff/sseettbb capabilities take a single numeric
+       argument each.  Argument values 0-7 of sseettaaff/sseettaabb are portably defined
        as follows (the middle column is the symbolic #define available in the
-       header for the ccuurrsseess or nnccuurrsseess libraries).  The terminal hardware is
+       header for the ccuurrsseess or nnccuurrsseess libraries).  The terminal hardware is
        free to map these as it likes, but the RGB values indicate normal
        locations in color space.
 
-                    CCoolloorr       ##ddeeffiinnee       VVaalluuee       RRGGBB
-                    black     CCOOLLOORR__BBLLAACCKK       0     0, 0, 0
-                    red       CCOOLLOORR__RREEDD          1     max,0,0
-                    green     CCOOLLOORR__GGRREEEENN       2     0,max,0
-                    yellow    CCOOLLOORR__YYEELLLLOOWW      3     max,max,0
-                    blue      CCOOLLOORR__BBLLUUEE        4     0,0,max
-                    magenta   CCOOLLOORR__MMAAGGEENNTTAA     5     max,0,max
-                    cyan      CCOOLLOORR__CCYYAANN        6     0,max,max
-                    white     CCOOLLOORR__WWHHIITTEE       7     max,max,max
+                    CCoolloorr       ##ddeeffiinnee       VVaalluuee       RRGGBB
+                    black     CCOOLLOORR__BBLLAACCKK       0     0, 0, 0
+                    red       CCOOLLOORR__RREEDD          1     max,0,0
+                    green     CCOOLLOORR__GGRREEEENN       2     0,max,0
+                    yellow    CCOOLLOORR__YYEELLLLOOWW      3     max,max,0
+                    blue      CCOOLLOORR__BBLLUUEE        4     0,0,max
+                    magenta   CCOOLLOORR__MMAAGGEENNTTAA     5     max,0,max
+                    cyan      CCOOLLOORR__CCYYAANN        6     0,max,max
+                    white     CCOOLLOORR__WWHHIITTEE       7     max,max,max
 
-       The argument values of sseettff/sseettbb historically correspond to a different
+       The argument values of sseettff/sseettbb historically correspond to a different
        mapping, i.e.,
 
-                    CCoolloorr       ##ddeeffiinnee       VVaalluuee       RRGGBB
-                    black     CCOOLLOORR__BBLLAACCKK       0     0, 0, 0
-                    blue      CCOOLLOORR__BBLLUUEE        1     0,0,max
-                    green     CCOOLLOORR__GGRREEEENN       2     0,max,0
-                    cyan      CCOOLLOORR__CCYYAANN        3     0,max,max
-                    red       CCOOLLOORR__RREEDD          4     max,0,0
-                    magenta   CCOOLLOORR__MMAAGGEENNTTAA     5     max,0,max
-                    yellow    CCOOLLOORR__YYEELLLLOOWW      6     max,max,0
-                    white     CCOOLLOORR__WWHHIITTEE       7     max,max,max
+                    CCoolloorr       ##ddeeffiinnee       VVaalluuee       RRGGBB
+                    black     CCOOLLOORR__BBLLAACCKK       0     0, 0, 0
+                    blue      CCOOLLOORR__BBLLUUEE        1     0,0,max
+                    green     CCOOLLOORR__GGRREEEENN       2     0,max,0
+                    cyan      CCOOLLOORR__CCYYAANN        3     0,max,max
+                    red       CCOOLLOORR__RREEDD          4     max,0,0
+                    magenta   CCOOLLOORR__MMAAGGEENNTTAA     5     max,0,max
+                    yellow    CCOOLLOORR__YYEELLLLOOWW      6     max,max,0
+                    white     CCOOLLOORR__WWHHIITTEE       7     max,max,max
 
        It is important to not confuse the two sets of color capabilities;
        otherwise red/blue will be interchanged on the display.
 
-       On an HP-like terminal, use ssccpp with a color-pair number parameter to
+       On an HP-like terminal, use ssccpp with a color-pair number parameter to
        set which color pair is current.
 
-       On a Tektronix-like terminal, the capability cccccc may be present to
-       indicate that colors can be modified.  If so, the iinniittcc capability will
-       take a color number (0 to ccoolloorrss - 1)and three more parameters which
+       On a Tektronix-like terminal, the capability cccccc may be present to
+       indicate that colors can be modified.  If so, the iinniittcc capability will
+       take a color number (0 to ccoolloorrss - 1)and three more parameters which
        describe the color.  These three parameters default to being
        interpreted as RGB (Red, Green, Blue) values.  If the boolean
-       capability hhllss is present, they are instead as HLS (Hue, Lightness,
+       capability hhllss is present, they are instead as HLS (Hue, Lightness,
        Saturation) indices.  The ranges are terminal-dependent.
 
-       On an HP-like terminal, iinniittpp may give a capability for changing a
+       On an HP-like terminal, iinniittpp may give a capability for changing a
        color-pair value.  It will take seven parameters; a color-pair number
-       (0 to mmaaxx__ppaaiirrss - 1), and two triples describing first background and
+       (0 to mmaaxx__ppaaiirrss - 1), and two triples describing first background and
        then foreground colors.  These parameters must be (Red, Green, Blue) or
-       (Hue, Lightness, Saturation) depending on hhllss.
+       (Hue, Lightness, Saturation) depending on hhllss.
 
        On some color terminals, colors collide with highlights.  You can
-       register these collisions with the nnccvv capability.  This is a bit-mask
+       register these collisions with the nnccvv capability.  This is a bit-mask
        of attributes not to be used when colors are enabled.  The
-       correspondence with the attributes understood by ccuurrsseess is as follows:
+       correspondence with the attributes understood by ccuurrsseess is as follows:
 
-                AAttttrriibbuuttee              BBiitt   DDeecciimmaall      SSeett bbyy
+                AAttttrriibbuuttee              BBiitt   DDeecciimmaall      SSeett bbyy
                 A_STANDOUT             0     1            sgr
                 A_UNDERLINE            1     2            sgr
                 A_REVERSE              2     4            sgr
@@ -1916,85 +1916,85 @@ DDEESSCCRRIIPPTTIIOONN
 
        For example, on many IBM PC consoles, the underline attribute collides
        with the foreground color blue and is not available in color mode.
-       These should have an nnccvv capability of 2.
+       These should have an nnccvv capability of 2.
 
-       SVr4 curses does nothing with nnccvv, ncurses recognizes it and optimizes
+       SVr4 curses does nothing with nnccvv, ncurses recognizes it and optimizes
        the output in favor of colors.
 
-   MMiisscceellllaanneeoouuss
+   MMiisscceellllaanneeoouuss
        If the terminal requires other than a null (zero) character as a pad,
        then this can be given as pad.  Only the first character of the pad
        string is used.  If the terminal does not have a pad character, specify
-       npc.  Note that ncurses implements the termcap-compatible PPCC variable;
+       npc.  Note that ncurses implements the termcap-compatible PPCC variable;
        though the application may set this value to something other than a
-       null, ncurses will test nnppcc first and use napms if the terminal has no
+       null, ncurses will test nnppcc first and use napms if the terminal has no
        pad character.
 
        If the terminal can move up or down half a line, this can be indicated
-       with hhuu (half-line up) and hhdd (half-line down).  This is primarily
+       with hhuu (half-line up) and hhdd (half-line down).  This is primarily
        useful for superscripts and subscripts on hard-copy terminals.  If a
        hard-copy terminal can eject to the next page (form feed), give this as
-       ffff (usually control L).
+       ffff (usually control L).
 
        If there is a command to repeat a given character a given number of
        times (to save time transmitting a large number of identical
-       characters) this can be indicated with the parameterized string rreepp.
+       characters) this can be indicated with the parameterized string rreepp.
        The first parameter is the character to be repeated and the second is
        the number of times to repeat it.  Thus, tparm(repeat_char, 'x', 10) is
        the same as “xxxxxxxxxx”.
 
        If the terminal has a settable command character, such as the TEKTRONIX
-       4025, this can be indicated with ccmmddcchh.  A prototype command character
+       4025, this can be indicated with ccmmddcchh.  A prototype command character
        is chosen which is used in all capabilities.  This character is given
-       in the ccmmddcchh capability to identify it.  The following convention is
+       in the ccmmddcchh capability to identify it.  The following convention is
        supported on some UNIX systems: The environment is to be searched for a
-       CCCC variable, and if found, all occurrences of the prototype character
+       CCCC variable, and if found, all occurrences of the prototype character
        are replaced with the character in the environment variable.
 
        Terminal descriptions that do not represent a specific kind of known
-       terminal, such as _s_w_i_t_c_h, _d_i_a_l_u_p, _p_a_t_c_h, and _n_e_t_w_o_r_k, should include
-       the ggnn (generic) capability so that programs can complain that they do
+       terminal, such as _s_w_i_t_c_h, _d_i_a_l_u_p, _p_a_t_c_h, and _n_e_t_w_o_r_k, should include
+       the ggnn (generic) capability so that programs can complain that they do
        not know how to talk to the terminal.  (This capability does not apply
-       to _v_i_r_t_u_a_l terminal descriptions for which the escape sequences are
+       to _v_i_r_t_u_a_l terminal descriptions for which the escape sequences are
        known.)
 
        If the terminal has a “meta key” which acts as a shift key, setting the
        8th bit of any character transmitted, this fact can be indicated with
-       kkmm.  Otherwise, software will assume that the 8th bit is parity and it
+       kkmm.  Otherwise, software will assume that the 8th bit is parity and it
        will usually be cleared.  If strings exist to turn this “meta mode” on
-       and off, they can be given as ssmmmm and rrmmmm.
+       and off, they can be given as ssmmmm and rrmmmm.
 
        If the terminal has more lines of memory than will fit on the screen at
-       once, the number of lines of memory can be indicated with llmm.  A value
-       of llmm#0 indicates that the number of lines is not fixed, but that there
+       once, the number of lines of memory can be indicated with llmm.  A value
+       of llmm#0 indicates that the number of lines is not fixed, but that there
        is still more memory than fits on the screen.
 
        If the terminal is one of those supported by the UNIX virtual terminal
-       protocol, the terminal number can be given as vvtt.
+       protocol, the terminal number can be given as vvtt.
 
        Media copy strings which control an auxiliary printer connected to the
-       terminal can be given as mmcc00: print the contents of the screen, mmcc44:
-       turn off the printer, and mmcc55: turn on the printer.  When the printer
+       terminal can be given as mmcc00: print the contents of the screen, mmcc44:
+       turn off the printer, and mmcc55: turn on the printer.  When the printer
        is on, all text sent to the terminal will be sent to the printer.  It
        is undefined whether the text is also displayed on the terminal screen
-       when the printer is on.  A variation mmcc55pp takes one parameter, and
+       when the printer is on.  A variation mmcc55pp takes one parameter, and
        leaves the printer on for as many characters as the value of the
        parameter, then turns the printer off.  The parameter should not exceed
-       255.  All text, including mmcc44, is transparently passed to the printer
-       while an mmcc55pp is in effect.
+       255.  All text, including mmcc44, is transparently passed to the printer
+       while an mmcc55pp is in effect.
 
-   GGlliittcchheess aanndd BBrraaiinnddaammaaggee
+   GGlliittcchheess aanndd BBrraaiinnddaammaaggee
        Hazeltine terminals, which do not allow “~” characters to be displayed
-       should indicate hhzz.
+       should indicate hhzz.
 
-       Terminals which ignore a line-feed immediately after an aamm wrap, such
-       as the Concept and vt100, should indicate xxeennll.
+       Terminals which ignore a line-feed immediately after an aamm wrap, such
+       as the Concept and vt100, should indicate xxeennll.
 
-       If eell is required to get rid of standout (instead of merely writing
-       normal text on top of it), xxhhpp should be given.
+       If eell is required to get rid of standout (instead of merely writing
+       normal text on top of it), xxhhpp should be given.
 
        Teleray terminals, where tabs turn all characters moved over to blanks,
-       should indicate xxtt (destructive tabs).  Note: the variable indicating
+       should indicate xxtt (destructive tabs).  Note: the variable indicating
        this is now “dest_tabs_magic_smso”; in older versions, it was
        teleray_glitch.  This glitch is also taken to mean that it is not
        possible to position the cursor on top of a “magic cookie”, that to
@@ -2002,49 +2002,49 @@ DDEESSCCRRIIPPTTIIOONN
        line.  The ncurses implementation ignores this glitch.
 
        The Beehive Superbee, which is unable to correctly transmit the escape
-       or control C characters, has xxssbb, indicating that the f1 key is used
+       or control C characters, has xxssbb, indicating that the f1 key is used
        for escape and f2 for control C.  (Only certain Superbees have this
        problem, depending on the ROM.)  Note that in older terminfo versions,
        this capability was called “beehive_glitch”; it is now “no_esc_ctl_c”.
 
        Other specific terminal problems may be corrected by adding more
-       capabilities of the form xx_x.
+       capabilities of the form xx_x.
 
-   SSiimmiillaarr TTeerrmmiinnaallss
+   SSiimmiillaarr TTeerrmmiinnaallss
        If there are two very similar terminals, one (the variant) can be
        defined as being just like the other (the base) with certain
        exceptions.  In the definition of the variant, the string capability
-       uussee can be given with the name of the base terminal.  The capabilities
-       given before uussee override those in the base type named by uussee.  If
-       there are multiple uussee capabilities, they are merged in reverse order.
-       That is, the rightmost uussee reference is processed first, then the one
+       uussee can be given with the name of the base terminal.  The capabilities
+       given before uussee override those in the base type named by uussee.  If
+       there are multiple uussee capabilities, they are merged in reverse order.
+       That is, the rightmost uussee reference is processed first, then the one
        to its left, and so forth.  Capabilities given explicitly in the entry
-       override those brought in by uussee references.
+       override those brought in by uussee references.
 
-       A capability can be canceled by placing xxxx@@ to the left of the use
-       reference that imports it, where _x_x is the capability.  For example,
+       A capability can be canceled by placing xxxx@@ to the left of the use
+       reference that imports it, where _x_x is the capability.  For example,
        the entry
 
               2621-nl, smkx@, rmkx@, use=2621,
 
-       defines a 2621-nl that does not have the ssmmkkxx or rrmmkkxx capabilities, and
+       defines a 2621-nl that does not have the ssmmkkxx or rrmmkkxx capabilities, and
        hence does not turn on the function key labels when in visual mode.
        This is useful for different modes for a terminal, or for different
        user preferences.
 
-   PPiittffaallllss ooff LLoonngg EEnnttrriieess
+   PPiittffaallllss ooff LLoonngg EEnnttrriieess
        Long terminfo entries are unlikely to be a problem; to date, no entry
        has even approached terminfo's 4096-byte string-table maximum.
        Unfortunately, the termcap translations are much more strictly limited
        (to 1023 bytes), thus termcap translations of long terminfo entries can
        cause problems.
 
-       The man pages for 4.3BSD and older versions of ttggeetteenntt(()) instruct the
+       The man pages for 4.3BSD and older versions of ttggeetteenntt(()) instruct the
        user to allocate a 1024-byte buffer for the termcap entry.  The entry
        gets null-terminated by the termcap library, so that makes the maximum
        safe length for a termcap entry 1k-1 (1023) bytes.  Depending on what
        the application and the termcap library being used does, and where in
-       the termcap file the terminal type that ttggeetteenntt(()) is searching for is,
+       the termcap file the terminal type that ttggeetteenntt(()) is searching for is,
        several bad things can happen.
 
        Some termcap libraries print a warning message or exit if they find an
@@ -2061,7 +2061,7 @@ DDEESSCCRRIIPPTTIIOONN
        The "before tc expansion" length is the most important one, because it
        affects more than just users of that particular terminal.  This is the
        length of the entry as it exists in /etc/termcap, minus the backslash-
-       newline pairs, which ttggeetteenntt(()) strips out while reading it.  Some
+       newline pairs, which ttggeetteenntt(()) strips out while reading it.  Some
        termcap libraries strip off the final newline, too (GNU termcap does
        not).  Now suppose:
 
@@ -2073,12 +2073,12 @@ DDEESSCCRRIIPPTTIIOONN
            the whole entry into the buffer, no matter what its length, to see
            if it is the entry it wants,
 
-       •   and ttggeetteenntt(()) is searching for a terminal type that either is the
+       •   and ttggeetteenntt(()) is searching for a terminal type that either is the
            long entry, appears in the termcap file after the long entry, or
-           does not appear in the file at all (so that ttggeetteenntt(()) has to search
+           does not appear in the file at all (so that ttggeetteenntt(()) has to search
            the whole termcap file).
 
-       Then ttggeetteenntt(()) will overwrite memory, perhaps its stack, and probably
+       Then ttggeetteenntt(()) will overwrite memory, perhaps its stack, and probably
        core dump the program.  Programs like telnet are particularly
        vulnerable; modern telnets pass along values like the terminal type
        automatically.  The results are almost as undesirable with a termcap
@@ -2089,7 +2089,7 @@ DDEESSCCRRIIPPTTIIOONN
 
        The "after tc expansion" length will have a similar effect to the
        above, but only for people who actually set TERM to that terminal type,
-       since ttggeetteenntt(()) only does "tc" expansion once it is found the terminal
+       since ttggeetteenntt(()) only does "tc" expansion once it is found the terminal
        type it was looking for, not while searching.
 
        In summary, a termcap entry that is longer than 1023 bytes can cause,
@@ -2099,12 +2099,12 @@ DDEESSCCRRIIPPTTIIOONN
        terminal types and users whose TERM variable does not have a termcap
        entry.
 
-       When in -C (translate to termcap) mode, the nnccuurrsseess implementation of
-       ttiicc(1M) issues warning messages when the pre-tc length of a termcap
+       When in -C (translate to termcap) mode, the nnccuurrsseess implementation of
+       ttiicc(1M) issues warning messages when the pre-tc length of a termcap
        translation is too long.  The -c (check) option also checks resolved
        (after tc expansion) lengths.
 
-   BBiinnaarryy CCoommppaattiibbiilliittyy
+   BBiinnaarryy CCoommppaattiibbiilliittyy
        It is not wise to count on portability of binary terminfo entries
        between commercial UNIX versions.  The problem is that there are at
        least two versions of terminfo (under HP-UX and AIX) which diverged
@@ -2112,37 +2112,37 @@ DDEESSCCRRIIPPTTIIOONN
        capabilities to the string table that (in the binary format) collide
        with System V and XSI Curses extensions.
 
-EEXXTTEENNSSIIOONNSS
-       Searching for terminal descriptions in $$HHOOMMEE//..tteerrmmiinnffoo and
+EEXXTTEENNSSIIOONNSS
+       Searching for terminal descriptions in $$HHOOMMEE//..tteerrmmiinnffoo and
        TERMINFO_DIRS is not supported by older implementations.
 
-       Some SVr4 ccuurrsseess implementations, and all previous to SVr4, do not
+       Some SVr4 ccuurrsseess implementations, and all previous to SVr4, do not
        interpret the %A and %O operators in parameter strings.
 
-       SVr4/XPG4 do not specify whether mmssggrr licenses movement while in an
+       SVr4/XPG4 do not specify whether mmssggrr licenses movement while in an
        alternate-character-set mode (such modes may, among other things, map
        CR and NL to characters that do not trigger local motions).  The
-       nnccuurrsseess implementation ignores mmssggrr in AALLTTCCHHAARRSSEETT mode.  This raises
+       nnccuurrsseess implementation ignores mmssggrr in AALLTTCCHHAARRSSEETT mode.  This raises
        the possibility that an XPG4 implementation making the opposite
-       interpretation may need terminfo entries made for nnccuurrsseess to have mmssggrr
+       interpretation may need terminfo entries made for nnccuurrsseess to have mmssggrr
        turned off.
 
-       The nnccuurrsseess library handles insert-character and insert-character modes
+       The nnccuurrsseess library handles insert-character and insert-character modes
        in a slightly non-standard way to get better update efficiency.  See
-       the IInnsseerrtt//DDeelleettee CChhaarraacctteerr subsection above.
+       the IInnsseerrtt//DDeelleettee CChhaarraacctteerr subsection above.
 
-       The parameter substitutions for sseett__cclloocckk and ddiissppllaayy__cclloocckk are not
+       The parameter substitutions for sseett__cclloocckk and ddiissppllaayy__cclloocckk are not
        documented in SVr4 or the XSI Curses standard.  They are deduced from
        the documentation for the AT&T 505 terminal.
 
-       Be careful assigning the kkmmoouuss capability.  The nnccuurrsseess wants to
-       interpret it as KKEEYY__MMOOUUSSEE, for use by terminals and emulators like
+       Be careful assigning the kkmmoouuss capability.  The nnccuurrsseess wants to
+       interpret it as KKEEYY__MMOOUUSSEE, for use by terminals and emulators like
        xterm that can return mouse-tracking information in the keyboard-input
        stream.
 
        X/Open Curses does not mention italics.  Portable applications must
        assume that numeric capabilities are signed 16-bit values.  This
-       includes the _n_o___c_o_l_o_r___v_i_d_e_o (ncv) capability.  The 32768 mask value
+       includes the _n_o___c_o_l_o_r___v_i_d_e_o (ncv) capability.  The 32768 mask value
        used for italics with ncv can be confused with an absent or cancelled
        ncv.  If italics should work with colors, then the ncv value must be
        specified, even if it is zero.
@@ -2151,33 +2151,33 @@ EEXXTTEENNSSIIOONNSS
        subsets of the XSI Curses standard and (in some cases) different
        extension sets.  Here is a summary, accurate as of October 1995:
 
-       SSVVRR44,, SSoollaarriiss,, nnccuurrsseess -- These support all SVr4 capabilities.
+       SSVVRR44,, SSoollaarriiss,, nnccuurrsseess -- These support all SVr4 capabilities.
 
-       SSGGII -- Supports the SVr4 set, adds one undocumented extended string
-       capability (sseett__ppgglleenn).
+       SSGGII -- Supports the SVr4 set, adds one undocumented extended string
+       capability (sseett__ppgglleenn).
 
-       SSVVrr11,, UUllttrriixx -- These support a restricted subset of terminfo
-       capabilities.  The booleans end with xxoonn__xxooffff; the numerics with
-       wwiiddtthh__ssttaattuuss__lliinnee; and the strings with pprrttrr__nnoonn.
+       SSVVrr11,, UUllttrriixx -- These support a restricted subset of terminfo
+       capabilities.  The booleans end with xxoonn__xxooffff; the numerics with
+       wwiiddtthh__ssttaattuuss__lliinnee; and the strings with pprrttrr__nnoonn.
 
-       HHPP//UUXX -- Supports the SVr1 subset, plus the SVr[234] numerics
-       nnuumm__llaabbeellss, llaabbeell__hheeiigghhtt, llaabbeell__wwiiddtthh, plus function keys 11 through
-       63, plus ppllaabb__nnoorrmm, llaabbeell__oonn, and llaabbeell__ooffff, plus some incompatible
+       HHPP//UUXX -- Supports the SVr1 subset, plus the SVr[234] numerics
+       nnuumm__llaabbeellss, llaabbeell__hheeiigghhtt, llaabbeell__wwiiddtthh, plus function keys 11 through
+       63, plus ppllaabb__nnoorrmm, llaabbeell__oonn, and llaabbeell__ooffff, plus some incompatible
        extensions in the string table.
 
-       AAIIXX -- Supports the SVr1 subset, plus function keys 11 through 63, plus
+       AAIIXX -- Supports the SVr1 subset, plus function keys 11 through 63, plus
        a number of incompatible string table extensions.
 
-       OOSSFF -- Supports both the SVr4 set and the AIX extensions.
+       OOSSFF -- Supports both the SVr4 set and the AIX extensions.
 
-FFIILLEESS
+FFIILLEESS
        /usr/share/terminfo/?/*  files containing terminal descriptions
 
-SSEEEE AALLSSOO
-       ttiicc(1M), iinnffooccmmpp(1M), ccuurrsseess(3X), pprriinnttff(3), tteerrmm(5).
-       tteerrmm__vvaarriiaabblleess(3X).
+SSEEEE AALLSSOO
+       ttiicc(1M), iinnffooccmmpp(1M), ccuurrsseess(3X), pprriinnttff(3), tteerrmm(5).
+       tteerrmm__vvaarriiaabblleess(3X).
 
-AAUUTTHHOORRSS
+AAUUTTHHOORRSS
        Zeyd M. Ben-Halim, Eric S. Raymond, Thomas E. Dickey.  Based on pcurses
        by Pavel Curtis.
 

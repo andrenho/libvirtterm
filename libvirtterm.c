@@ -294,14 +294,51 @@ static void vt_scroll_based_on_cursor(VT* vt)
 
 #pragma region Escape Sequences
 
+#define ESC_XTERM       "\e[?#h"
+
 static void vt_start_escape_seq(VT* vt, char c)
 {
     vt->esc_buffer[0] = c;
 }
 
+static bool match_escape_seq(const char* data, const char* pattern, int args[8], int* argn)
+{
+    int i = 0;
+
+    *argn = 0;
+    memset(args, 0, sizeof args[0] * 8);
+
+    if (data[strlen(data) - 1] != pattern[strlen(pattern) - 1])  // fail fast
+        return false;
+
+    for (const char* p = pattern; *p; ++p) {
+        while (data[i] == ';')
+            ++i;
+        if (*p == '#') {
+            char* endptr;
+            args[(*argn)++] = strtol(&data[i], &endptr, 10);
+            i = endptr - data;
+        } else if (*p != data[i] && data[i] != ';') {
+            return false;
+        } else {
+            ++i;
+        }
+    }
+
+    return i == strlen(data);
+}
+
 static bool parse_escape_seq(VT* vt)
 {
-    // TODO
+    int args[8];
+    int argn;
+#define T return true;
+#define MATCH(pattern) match_escape_seq(vt->esc_buffer, pattern, args, &argn)
+
+    if (MATCH(ESC_XTERM))           { T }    // do nothing for now
+
+#undef MATCH
+#undef T
     return false;
 }
 
@@ -314,7 +351,7 @@ static void cancel_escape_seq(VT* vt)
 {
     char copy_buf[sizeof vt->esc_buffer];
     memcpy(copy_buf, vt->esc_buffer, sizeof vt->esc_buffer);
-    fprintf(stderr, "Invalid escape sequence: ESC %s", copy_buf);
+    fprintf(stderr, "Invalid escape sequence: (ESC)%s\n", &copy_buf[1]);
     vt_beep(vt);
     end_escape_seq(vt);
     vt_write(vt, &copy_buf[1], strlen(copy_buf) - 1);
@@ -330,8 +367,12 @@ static void vt_add_escape_char(VT* vt, char c)
 
     vt->esc_buffer[len] = c;
 
-    if (parse_escape_seq(vt))
+    if (parse_escape_seq(vt)) {
         end_escape_seq(vt);
+    } else if (isalpha(vt->esc_buffer[strlen(vt->esc_buffer) - 1])) {
+        fprintf(stderr, "Escape sequence not recognized: (ESC)%s\n", &vt->esc_buffer[1]);
+        end_escape_seq(vt);
+    }
 }
 
 #pragma endregion
@@ -384,10 +425,9 @@ void vt_write(VT* vt, const char* str, size_t str_sz)
     // parse characters
     for (size_t i = 0; i < str_sz; ++i) {
         CHAR c = str[i];
-#ifdef VT_DEBUG_SUPPORT
-        if (vt->config.debug >= VT_DEBUG_ALL_BYTES)
-            printf("%c      %d  0x%02x\n", c >= 32 && c < 127 ? c : ' ', c, c);
-#endif
+        if (vt->config.debug >= VT_DEBUG_ALL_BYTES) {
+            if (c < 32 || c > 126) printf("[%02X]", c); else printf("%c", c);
+        }
         if (!vt->esc_buffer[0])   // not parsing escape sequence
             vt_add_char(vt, c);
         else

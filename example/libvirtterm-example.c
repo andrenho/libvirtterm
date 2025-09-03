@@ -15,7 +15,6 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 
-#define VT_DEBUG_SUPPORT 1
 #include "../libvirtterm.h"
 #include "colors.h"
 
@@ -28,7 +27,6 @@ static SDL_AudioStream* stream = NULL;
 static Uint8*           wav_data = NULL;
 static Uint32           wav_data_len = 0;
 static int              master_pty = -1;
-static bool             play_beep = false;
 static VT*              vt;
 static SDL_Texture*     font;
 
@@ -37,15 +35,6 @@ static SDL_Texture*     font;
 #define ZOOM 2.f
 #define BORDER 16
 #define INPUT_BUFFER_SIZE 16*1024
-
-void vt_callback(VT* vt, VTEvent* e)
-{
-    (void) vt;
-
-    if (e->type == VT_EVENT_BELL)
-        play_beep = true;
-}
-
 
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 {
@@ -107,7 +96,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     SDL_GetWindowSize(window, &w, &h);
     VTConfig config = VT_DEFAULT_CONFIG;
     config.debug = VT_DEBUG_ALL_BYTES;
-    vt = vt_new((h - BORDER*2) / FONT_H / ZOOM, (w - BORDER*2) / FONT_W / ZOOM, vt_callback, &config, NULL);
+    vt = vt_new((h - BORDER*2) / FONT_H / ZOOM, (w - BORDER*2) / FONT_W / ZOOM, &config, NULL);
 
     //
     // open shell
@@ -236,13 +225,15 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     (void) appstate;
 
     //
-    // continue playing beep
+    // process VT
     //
-    if (play_beep) {
-        while (SDL_GetAudioStreamQueued(stream) < (int)wav_data_len) {
-            SDL_PutAudioStreamData(stream, wav_data, wav_data_len);
+    VTEvent e;
+    while (vt_next_event(vt, &e)) {
+        if (e.type == VT_EVENT_BELL) {
+            // play beep
+            while (SDL_GetAudioStreamQueued(stream) < (int)wav_data_len)
+                SDL_PutAudioStreamData(stream, wav_data, wav_data_len);
         }
-        play_beep = false;
     }
 
     //
