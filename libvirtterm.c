@@ -231,16 +231,19 @@ static void vt_cursor_advance(VT* vt, int rows, int columns)
 {
     vt->cursor.row += rows;
     vt->cursor.column += columns;
+    vt_add_event(vt, &(VTEvent) { .type = VT_EVENT_CURSOR_MOVED });
 }
 
 static void vt_cursor_to_bol(VT* vt)
 {
     vt->cursor.column = 0;
+    vt_add_event(vt, &(VTEvent) { .type = VT_EVENT_CURSOR_MOVED });
 }
 
 static void vt_cursor_tab(VT* vt)
 {
     vt->cursor.column = ((vt->cursor.column / 8) + 1) * 8;
+    vt_add_event(vt, &(VTEvent) { .type = VT_EVENT_CURSOR_MOVED });
 }
 
 #pragma endregion
@@ -294,14 +297,15 @@ static void vt_scroll_based_on_cursor(VT* vt)
 
 #pragma region Escape Sequences
 
-#define ESC_XTERM       "\e[?#h"
+#define ESC_XTERM           "\e[?%h"
+#define ESC_CURSOR_RIGHT    "\e[%C"
 
 static void vt_start_escape_seq(VT* vt, char c)
 {
     vt->esc_buffer[0] = c;
 }
 
-static bool match_escape_seq(const char* data, const char* pattern, int args[8], int* argn)
+static bool match_escape_seq(const char* data, const char* pattern, INT args[8], int* argn)
 {
     int i = 0;
 
@@ -314,7 +318,7 @@ static bool match_escape_seq(const char* data, const char* pattern, int args[8],
     for (const char* p = pattern; *p; ++p) {
         while (data[i] == ';')
             ++i;
-        if (*p == '#') {
+        if (*p == '%') {
             char* endptr;
             args[(*argn)++] = strtol(&data[i], &endptr, 10);
             i = endptr - data;
@@ -325,17 +329,23 @@ static bool match_escape_seq(const char* data, const char* pattern, int args[8],
         }
     }
 
-    return i == strlen(data);
+    return i == (int) strlen(data);
+}
+
+static inline INT _0to1(INT n)
+{
+    return n == 0 ? 1 : n;
 }
 
 static bool parse_escape_seq(VT* vt)
 {
-    int args[8];
+    INT args[8];
     int argn;
 #define T return true;
 #define MATCH(pattern) match_escape_seq(vt->esc_buffer, pattern, args, &argn)
 
     if (MATCH(ESC_XTERM))           { T }    // do nothing for now
+    if (MATCH(ESC_CURSOR_RIGHT))    { vt_cursor_advance(vt, 0, _0to1(args[0])); T }
 
 #undef MATCH
 #undef T

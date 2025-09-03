@@ -36,7 +36,7 @@ int main()
 
     // test of page and scroll
     R
-    for (size_t i = 0; i < 10; ++i) {
+    for (int i = 0; i < 10; ++i) {
         char buf[32]; sprintf(buf, "%02d 34567890123456789", i);
         W(buf) ACH(i, 1, i % 10 + '0')
     }
@@ -45,6 +45,9 @@ int main()
 
     // escape sequence too long
     R W("\e012345678901234567890123456789012345") ACH(0, 0, '0')
+
+    // escape sequence cursor right
+    R W("a\e[2Cb") ACH(0, 0, 'a') ACH(0, 1, ' ') ACH(0, 2, ' ') ACH(0, 3, 'b')
 
     vt_free(vt);
 }
