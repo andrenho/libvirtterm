@@ -479,6 +479,8 @@ static void escape_seq_clear_cells(VT* vt, char mode, int parameter)
     }
 }
 
+static void vt_add_char(VT* vt, CHAR c);
+
 static bool parse_escape_seq(VT* vt)
 {
     INT args[8];
@@ -488,8 +490,8 @@ static bool parse_escape_seq(VT* vt)
 #define N(n) ((n) == 0 ? 1 : (n))
 #define MATCH(pattern) match_escape_seq(vt->esc_buffer, pattern, args, &argn)
 
-    if (MATCH("\e[?%h"))        { T }    // do nothing for now (Xterm extension)
-    if (MATCH("\e[?%l"))        { T }    // do nothing for now (Xterm extension)
+    if (MATCH("\e[?%%h"))       { T }    // do nothing for now (Xterm extension)
+    if (MATCH("\e[?%%l"))       { T }    // do nothing for now (Xterm extension)
     if (MATCH("\e[%@"))         { vt_scroll_horizontal(vt, vt->cursor.row, vt->cursor.column, vt->columns - 1, N(args[0])); T }
     if (MATCH("\e[%A"))         { vt_cursor_advance(vt, -N(args[0]), 0); T }
     if (MATCH("\e[%B"))         { vt_cursor_advance(vt, N(args[0]), 0); T }
@@ -504,6 +506,8 @@ static bool parse_escape_seq(VT* vt)
     if (MATCH("\e[%L"))         { vt_scroll_vertical(vt, vt->scroll_area_top, vt->scroll_area_bottom, N(args[0])); T }
     if (MATCH("\e[%M"))         { vt_scroll_vertical(vt, vt->scroll_area_top, vt->scroll_area_bottom, -N(args[0])); T }
     if (MATCH("\e[%P"))         { vt_scroll_horizontal(vt, vt->cursor.row, vt->cursor.column, vt->columns - 1, -N(args[0])); T }
+    if (MATCH("\e[%X"))         { for (INT i = 0; i < N(args[0]); ++i) vt_add_char(vt, ' '); T }
+    if (MATCH("\e[%a"))         { vt_cursor_advance(vt, 0, N(args[0])); T }
     if (MATCH("\e[%d"))         { vt_move_cursor_to(vt, args[0] - 1, vt->cursor.column); T }
     if (MATCH("\e[%%r"))        { vt_set_scoll_area(vt, args[0] - 1, args[1] - 1); T }
 
