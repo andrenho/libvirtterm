@@ -490,8 +490,11 @@ static bool parse_escape_seq(VT* vt)
 #define N(n) ((n) == 0 ? 1 : (n))
 #define MATCH(pattern) match_escape_seq(vt->esc_buffer, pattern, args, &argn)
 
-    if (MATCH("\e[?%%h"))       { T }    // do nothing for now (Xterm extension)
-    if (MATCH("\e[?%%l"))       { T }    // do nothing for now (Xterm extension)
+    // if (MATCH("\e[?%%h"))       { T }    // do nothing for now (Xterm extension)
+    // if (MATCH("\e[?%%l"))       { T }    // do nothing for now (Xterm extension)
+    if (MATCH("\e[%%%t"))       { T }    // do nothing for now (Xterm extension)
+    if (MATCH("\e="))           { T }    // do nothing - not used anymore - keypad related
+    if (MATCH("\e>"))           { T }    // do nothing - not used anymore - keypad related
     if (MATCH("\e[%@"))         { vt_scroll_horizontal(vt, vt->cursor.row, vt->cursor.column, vt->columns - 1, N(args[0])); T }
     if (MATCH("\e[%A"))         { vt_cursor_advance(vt, -N(args[0]), 0); T }
     if (MATCH("\e[%B"))         { vt_cursor_advance(vt, N(args[0]), 0); T }
