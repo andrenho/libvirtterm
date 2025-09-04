@@ -68,7 +68,7 @@ typedef enum VTColor {
 // Config
 //
 
-typedef enum { VT_NO_DEBUG, VT_DEBUG_ERRORS_ONLY, VT_DEBUG_ALL_SEQUENCES, VT_DEBUG_ALL_BYTES } VTDebug;
+typedef enum { VT_NO_DEBUG, VT_DEBUG_ERRORS_ONLY, VT_DEBUG_ALL_ESCAPE_SEQUENCES, VT_DEBUG_ALL_BYTES } VTDebug;
 
 typedef struct VTConfig {
     VTColor          default_fg_color;       // some default colors
@@ -89,7 +89,7 @@ typedef struct VTConfig {
     .automatic_cursor = true,               \
     .bold_is_bright = true,                 \
     .acs_chars = "+#????o#??+++++~---_++++|<>*!fo", \
-    .debug = VT_NO_DEBUG,                   \
+    .debug = VT_DEBUG_ERRORS_ONLY,          \
 }
 
 //

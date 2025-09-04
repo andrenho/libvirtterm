@@ -33,6 +33,7 @@ typedef struct VT {
     INT        scroll_area_top;
     INT        scroll_area_bottom;
     bool       acs_mode;
+    bool       insert_mode;
 
     // escape sequence parsing
     char       esc_buffer[32];
@@ -77,6 +78,8 @@ VT* vt_new(INT rows, INT columns, VTConfig const* config, void* data)
     vt->event_queue_start = NULL;
     vt->event_queue_end = NULL;
     vt->data = data;
+    vt->acs_mode = false;
+    vt->insert_mode = false;
     memset(vt->esc_buffer, 0, sizeof vt->esc_buffer);
     vt_resize(vt, rows, columns);
     return vt;
@@ -99,6 +102,8 @@ void vt_reset(VT* vt)
     vt->current_attrib = DEFAULT_ATTR;
     vt->scroll_area_top = 0;
     vt->scroll_area_bottom = vt->rows - 1;
+    vt->acs_mode = false;
+    vt->insert_mode = false;
     for (int i = 0; i < vt->rows * vt->columns; ++i)
         vt->matrix[i] = (VTCell) { .ch = ' ', .attrib = DEFAULT_ATTR };
 }
@@ -214,7 +219,7 @@ static void vt_memmove(VT* vt, INT row_start, INT row_end, INT column_start, INT
     size_t start = row_start * vt->columns + column_start;
     size_t end = row_end * vt->columns + column_end;
     size_t dest = (row_start + n_rows) * vt->columns + (column_start + n_columns);
-    size_t size = end - start;
+    size_t size = end - start + 1;
 
     memmove(&vt->matrix[dest], &vt->matrix[start], size * sizeof(VTCell));
 }
@@ -300,10 +305,10 @@ static void vt_scroll_horizontal(VT* vt, INT row, INT start_column, INT end_colu
 
     if (columns_forward > 0) {
         vt_memmove(vt, row, row, start_column, end_column - columns_forward, 0, columns_forward);
-        vt_memset_ch(vt, row, row, start_column, start_column + columns_forward, ' ');
+        vt_memset_ch(vt, row, row, start_column, start_column + columns_forward - 1, ' ');
     } else if (columns_forward < 0) {
         vt_memmove(vt, row, row, start_column - columns_forward, end_column, 0, columns_forward);
-        vt_memset_ch(vt, row, row, end_column + columns_forward, end_column, ' ');
+        vt_memset_ch(vt, row, row, end_column + columns_forward + 1, end_column, ' ');
     }
 
     // report events
@@ -346,7 +351,7 @@ static void vt_start_escape_seq(VT* vt, char c)
     vt->esc_buffer[0] = c;
 }
 
-static bool match_escape_seq(const char* data, const char* pattern, INT args[8], int* argn)
+static bool match_escape_seq(VT* vt, const char* data, const char* pattern, INT args[8], int* argn)
 {
     int i = 0;
 
@@ -370,7 +375,15 @@ static bool match_escape_seq(const char* data, const char* pattern, INT args[8],
         }
     }
 
-    return i == (int) strlen(data);
+    if (i == (int) strlen(data)) {
+        if (vt->config.debug >= VT_DEBUG_ALL_ESCAPE_SEQUENCES) {
+            printf("\e[0;35m\\e%s\e[0m", &data[1]);
+            fflush(stdout);
+        }
+        return true;
+    } else {
+        return false;
+    }
 }
 
 static void update_current_attrib(VT* vt, int arg)
@@ -460,7 +473,8 @@ static void escape_seq_clear_cells(VT* vt, char mode, int parameter)
             case 3:
                 break;
             default:
-                fprintf(stderr, "Unsupported parameter for ESC[#J");
+                if (vt->config.debug >= VT_DEBUG_ERRORS_ONLY)
+                    fprintf(stderr, "Unsupported parameter for ESC[#J");
         }
     } else if (mode == 'K') {
         switch (parameter) {
@@ -474,9 +488,17 @@ static void escape_seq_clear_cells(VT* vt, char mode, int parameter)
                 vt_memset_ch(vt, vt->cursor.row, vt->cursor.row, 0, vt->columns - 1, ' ');
             break;
             default:
-                fprintf(stderr, "Unsupported parameter for ESC[#K");
         }
     }
+}
+
+static void xterm_escape_seq(VT* vt, char mode, INT arg0, INT arg1)
+{
+    switch (arg0) {
+    }
+
+    if (vt->config.debug >= VT_DEBUG_ERRORS_ONLY)
+        fprintf(stderr, "Invalid/unsupported xterm escape sequence: (ESC)%s\n", &vt->esc_buffer[1]);
 }
 
 static void vt_add_char(VT* vt, CHAR c);
@@ -488,10 +510,10 @@ static bool parse_escape_seq(VT* vt)
 
 #define T return true;
 #define N(n) ((n) == 0 ? 1 : (n))
-#define MATCH(pattern) match_escape_seq(vt->esc_buffer, pattern, args, &argn)
+#define MATCH(pattern) match_escape_seq(vt, vt->esc_buffer, pattern, args, &argn)
 
-    // if (MATCH("\e[?%%h"))       { T }    // do nothing for now (Xterm extension)
-    // if (MATCH("\e[?%%l"))       { T }    // do nothing for now (Xterm extension)
+    if (MATCH("\e[?%%h"))       { xterm_escape_seq(vt, 'h', args[0], args[1]); T }    // do nothing for now (Xterm extension)
+    if (MATCH("\e[?%%l"))       { xterm_escape_seq(vt, 'l', args[0], args[1]); T }    // do nothing for now (Xterm extension)
     if (MATCH("\e[%%%t"))       { T }    // do nothing for now (Xterm extension)
     if (MATCH("\e="))           { T }    // do nothing - not used anymore - keypad related
     if (MATCH("\e>"))           { T }    // do nothing - not used anymore - keypad related
@@ -512,6 +534,8 @@ static bool parse_escape_seq(VT* vt)
     if (MATCH("\e[%X"))         { for (INT i = 0; i < N(args[0]); ++i) vt_add_char(vt, ' '); T }
     if (MATCH("\e[%a"))         { vt_cursor_advance(vt, 0, N(args[0])); T }
     if (MATCH("\e[%d"))         { vt_move_cursor_to(vt, args[0] - 1, vt->cursor.column); T }
+    if (MATCH("\e[4h"))         { vt->insert_mode = true; T }
+    if (MATCH("\e[4l"))         { vt->insert_mode = false; T }
     if (MATCH("\e[%%r"))        { vt_set_scoll_area(vt, args[0] - 1, args[1] - 1); T }
 
     if (MATCH("\e[%%%m")) {
@@ -537,7 +561,8 @@ static void cancel_escape_seq(VT* vt)
 {
     char copy_buf[sizeof vt->esc_buffer];
     memcpy(copy_buf, vt->esc_buffer, sizeof vt->esc_buffer);
-    fprintf(stderr, "Invalid escape sequence: (ESC)%s\n", &copy_buf[1]);
+    if (vt->config.debug >= VT_DEBUG_ERRORS_ONLY)
+        fprintf(stderr, "Invalid escape sequence: (ESC)%s\n", &copy_buf[1]);
     vt_beep(vt);
     end_escape_seq(vt);
     vt_write(vt, &copy_buf[1], strlen(copy_buf) - 1);
@@ -556,7 +581,8 @@ static void vt_add_escape_char(VT* vt, char c)
     if (parse_escape_seq(vt)) {
         end_escape_seq(vt);
     } else if (isalpha(vt->esc_buffer[strlen(vt->esc_buffer) - 1])) {
-        fprintf(stderr, "Escape sequence not recognized: (ESC)%s\n", &vt->esc_buffer[1]);
+        if (vt->config.debug >= VT_DEBUG_ERRORS_ONLY)
+            fprintf(stderr, "Escape sequence not recognized: (ESC)%s\n", &vt->esc_buffer[1]);
         end_escape_seq(vt);
     }
 }
@@ -572,6 +598,8 @@ static void vt_add_escape_char(VT* vt, char c)
 static void vt_add_regular_char(VT* vt, CHAR c)
 {
     vt_scroll_based_on_cursor(vt);
+    if (vt->insert_mode)
+        vt_scroll_horizontal(vt, vt->cursor.row, vt->cursor.column, vt->columns - 1, 1);
     vt_set_ch(vt, vt->cursor.row, vt->cursor.column, c);
     vt_add_event(vt, &(VTEvent) {
         .type = VT_EVENT_CELLS_UPDATED,
@@ -582,6 +610,14 @@ static void vt_add_regular_char(VT* vt, CHAR c)
 
 static void vt_add_char(VT* vt, CHAR c)
 {
+    if (vt->config.debug >= VT_DEBUG_ALL_BYTES) {
+        if ((c >= 32 && c < 127) || c == 10 || c == 13)
+            printf("%c", c);
+        else if (c != '\e')
+            printf("\e[0;36m[%02X]\e[0m", c);
+        fflush(stdout);
+    }
+
     switch (c) {
         case CR:
             vt_cursor_to_bol(vt);
@@ -611,9 +647,6 @@ void vt_write(VT* vt, const char* str, size_t str_sz)
     // parse characters
     for (size_t i = 0; i < str_sz; ++i) {
         CHAR c = str[i];
-        if (vt->config.debug >= VT_DEBUG_ALL_BYTES) {
-            if (c < 32 || c > 126) printf("[%02X]", c); else printf("%c", c);
-        }
         if (!vt->esc_buffer[0])   // not parsing escape sequence
             vt_add_char(vt, c);
         else
