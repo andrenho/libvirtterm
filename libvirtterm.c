@@ -449,7 +449,7 @@ static void update_current_attrib(VT* vt, int arg)
         case 45: vt->current_attrib.bg_color = VT_MAGENTA; break;
         case 46: vt->current_attrib.bg_color = VT_CYAN; break;
         case 47: vt->current_attrib.bg_color = VT_WHITE; break;
-        case 49: vt->current_attrib.bg_color = vt->config.default_fg_color; break;
+        case 49: vt->current_attrib.bg_color = vt->config.default_bg_color; break;
         case 90: vt->current_attrib.fg_color = VT_BRIGHT_BLACK; break;
         case 91: vt->current_attrib.fg_color = VT_BRIGHT_RED; break;
         case 92: vt->current_attrib.fg_color = VT_BRIGHT_GREEN; break;
