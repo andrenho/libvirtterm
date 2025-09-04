@@ -1,4 +1,3 @@
-#define VT_DEBUG_SUPPORT 1
 #include "../libvirtterm.c"
 
 #include <assert.h>
@@ -48,6 +47,16 @@ int main()
 
     // escape sequence cursor right
     R W("a\e[2Cb") ACH(0, 0, 'a') ACH(0, 1, ' ') ACH(0, 2, ' ') ACH(0, 3, 'b')
+
+    // test vt_memset
+    R vt_memset_ch(vt, 1, 1, 3, 6, 'x');
+    ACH(1, 2, ' ') ACH(1, 3, 'x') ACH(1, 6, 'x') ACH(1, 7, ' ')
+
+    R vt_memset_ch(vt, 1, 1, 0, 19, 'y');
+    ACH(0, 19, ' ') ACH(1, 0, 'y') ACH(1, 19, 'y') ACH(2, 0, ' ')
+
+    R vt_memset_ch(vt, 1, 2, 18, 2, 'z');
+    ACH(1, 17, ' ') ACH(1, 18, 'z') ACH(1, 19, 'z') ACH(2, 0, 'z') ACH(2, 2, 'z') ACH(2, 3, ' ')
 
     vt_free(vt);
 }

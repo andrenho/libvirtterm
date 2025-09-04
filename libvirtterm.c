@@ -198,7 +198,7 @@ static void vt_memset_ch(VT* vt, INT row_start, INT row_end, INT column_start, I
     column_start = MIN(MAX(column_start, 0), vt->columns - 1);
     column_end = MIN(MAX(column_end, 0), vt->columns - 1);
 
-    if (row_start > row_end || column_start > column_end)
+    if (row_start > row_end || (row_start == row_end) && column_start > column_end)
         return;
 
     size_t start = row_start * vt->columns + column_start;
