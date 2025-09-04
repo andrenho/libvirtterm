@@ -1,5 +1,6 @@
 #include "libvirtterm.h"
 
+#include <assert.h>
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -183,6 +184,7 @@ static void vt_set_ch(VT* vt, INT row, INT column, CHAR c)
 {
     row = MAX(MIN(row, vt->rows - 1), 0);
     column = MAX(MIN(column, vt->columns - 1), 0);
+    assert(row * vt->columns + column < vt->rows * vt->columns);
     vt->matrix[row * vt->columns + column] = (VTCell) {
         .ch = c,
         .attrib = vt->current_attrib,
@@ -202,8 +204,10 @@ static void vt_memset_ch(VT* vt, INT row_start, INT row_end, INT column_start, I
     size_t start = row_start * vt->columns + column_start;
     size_t end = row_end * vt->columns + column_end;
 
-    for (size_t i = start; i <= end; ++i)
+    for (size_t i = start; i <= end; ++i) {
+        assert(i < vt->rows * vt->columns);
         vt->matrix[i] = (VTCell) { .ch = c, .attrib = vt->current_attrib };
+    }
 }
 
 static void vt_memmove(VT* vt, INT row_start, INT row_end, INT column_start, INT column_end, INT n_rows, INT n_columns)
@@ -211,7 +215,7 @@ static void vt_memmove(VT* vt, INT row_start, INT row_end, INT column_start, INT
     row_start = MIN(MAX(row_start, 0), vt->rows - 1);
     row_end = MIN(MAX(row_end, 0), vt->rows - 1);
     column_start = MIN(MAX(column_start, 0), vt->columns - 1);
-    column_end = MIN(MAX(column_end, 0), vt->columns - 1);
+    column_end = MIN(MAX(column_end, 0), vt->columns);
 
     if (row_start > row_end || column_start > column_end)
         return;
@@ -219,7 +223,11 @@ static void vt_memmove(VT* vt, INT row_start, INT row_end, INT column_start, INT
     size_t start = row_start * vt->columns + column_start;
     size_t end = row_end * vt->columns + column_end;
     size_t dest = (row_start + n_rows) * vt->columns + (column_start + n_columns);
-    size_t size = end - start + 1;
+    size_t size = end - start;
+    size_t past_the_end = vt->columns * vt->rows;
+
+    assert(dest + size < past_the_end);
+    assert(start + size < past_the_end);
 
     memmove(&vt->matrix[dest], &vt->matrix[start], size * sizeof(VTCell));
 }
@@ -307,7 +315,7 @@ static void vt_scroll_horizontal(VT* vt, INT row, INT start_column, INT end_colu
         vt_memmove(vt, row, row, start_column, end_column - columns_forward, 0, columns_forward);
         vt_memset_ch(vt, row, row, start_column, start_column + columns_forward - 1, ' ');
     } else if (columns_forward < 0) {
-        vt_memmove(vt, row, row, start_column - columns_forward, end_column, 0, columns_forward);
+        vt_memmove(vt, row, row, start_column - columns_forward, end_column + 1, 0, columns_forward);
         vt_memset_ch(vt, row, row, end_column + columns_forward + 1, end_column, ' ');
     }
 
@@ -333,8 +341,13 @@ static void vt_scroll_based_on_cursor(VT* vt)
 
 static void vt_set_scoll_area(VT* vt, INT top, INT bottom)
 {
-    vt->scroll_area_top = top;
-    vt->scroll_area_bottom = bottom;
+    if (top == 0 && bottom == 0) {
+        vt->scroll_area_top = 0;
+        vt->scroll_area_bottom = vt->rows - 1;
+    } else {
+        vt->scroll_area_top = top;
+        vt->scroll_area_bottom = bottom;
+    }
     vt_move_cursor_to(vt, 0, 0);
 }
 
@@ -534,9 +547,11 @@ static bool parse_escape_seq(VT* vt)
     if (MATCH("\e[%X"))         { for (INT i = 0; i < N(args[0]); ++i) vt_add_char(vt, ' '); T }
     if (MATCH("\e[%a"))         { vt_cursor_advance(vt, 0, N(args[0])); T }
     if (MATCH("\e[%d"))         { vt_move_cursor_to(vt, args[0] - 1, vt->cursor.column); T }
+    if (MATCH("\e[%e"))         { vt_cursor_advance(vt, N(args[0]), 0); T }
+    if (MATCH("\e[%%f"))        { vt_move_cursor_to(vt, args[0] - 1, args[1] - 1); T }
     if (MATCH("\e[4h"))         { vt->insert_mode = true; T }
     if (MATCH("\e[4l"))         { vt->insert_mode = false; T }
-    if (MATCH("\e[%%r"))        { vt_set_scoll_area(vt, args[0] - 1, args[1] - 1); T }
+    if (MATCH("\e[%%r"))        { vt_set_scoll_area(vt, N(args[0]) - 1, N(args[1]) - 1); T }
 
     if (MATCH("\e[%%%m")) {
         update_current_attrib(vt, 0);
@@ -597,7 +612,6 @@ static void vt_add_escape_char(VT* vt, char c)
 
 static void vt_add_regular_char(VT* vt, CHAR c)
 {
-    vt_scroll_based_on_cursor(vt);
     if (vt->insert_mode)
         vt_scroll_horizontal(vt, vt->cursor.row, vt->cursor.column, vt->columns - 1, 1);
     vt_set_ch(vt, vt->cursor.row, vt->cursor.column, c);
@@ -611,12 +625,16 @@ static void vt_add_regular_char(VT* vt, CHAR c)
 static void vt_add_char(VT* vt, CHAR c)
 {
     if (vt->config.debug >= VT_DEBUG_ALL_BYTES) {
-        if ((c >= 32 && c < 127) || c == 10 || c == 13)
+        if (c >= 32 && c < 127)
             printf("%c", c);
         else if (c != '\e')
             printf("\e[0;36m[%02X]\e[0m", c);
+        if (c == 10 || c == 13)
+            printf("\n");
         fflush(stdout);
     }
+
+    vt_scroll_based_on_cursor(vt);
 
     switch (c) {
         case CR:
@@ -664,6 +682,7 @@ void vt_write(VT* vt, const char* str, size_t str_sz)
 
 VTCell vt_char(VT* vt, INT row, INT column)
 {
+    assert(row * vt->columns + column < vt->rows * vt->columns);
     VTCell ch = vt->matrix[row * vt->columns + column];
 
     if (vt->cursor.visible && vt->cursor.row == row && vt->config.automatic_cursor && (
