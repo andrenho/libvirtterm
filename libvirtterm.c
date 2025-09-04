@@ -612,6 +612,7 @@ static void vt_add_escape_char(VT* vt, char c)
 
 static void vt_add_regular_char(VT* vt, CHAR c)
 {
+    vt_scroll_based_on_cursor(vt);
     if (vt->insert_mode)
         vt_scroll_horizontal(vt, vt->cursor.row, vt->cursor.column, vt->columns - 1, 1);
     vt_set_ch(vt, vt->cursor.row, vt->cursor.column, c);
@@ -634,14 +635,16 @@ static void vt_add_char(VT* vt, CHAR c)
         fflush(stdout);
     }
 
-    vt_scroll_based_on_cursor(vt);
-
     switch (c) {
         case CR:
             vt_cursor_to_bol(vt);
             break;
         case LF:
             vt_cursor_advance(vt, 1, 0);
+            if (vt->cursor.row > vt->scroll_area_bottom) {
+                vt_scroll_vertical(vt, vt->scroll_area_top, vt->scroll_area_bottom, 1);
+                vt_cursor_advance(vt, -1, 0);
+            }
             break;
         case BACKSPACE:
             vt_cursor_advance(vt, 0, -1);
