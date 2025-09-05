@@ -74,6 +74,7 @@ typedef struct VTConfig {
     VTColor          default_fg_color;       // some default colors
     VTColor          default_bg_color;
     VTColor          cursor_color;
+    VTColor          blinking_cursor_color;
     VTColor          cursor_char_color;
     bool             automatic_cursor;       // if true, control cursor from within libvirtterm, else sends cursor updates as events
     bool             bold_is_bright;         // true = bold is also bright color
@@ -85,6 +86,7 @@ typedef struct VTConfig {
     .default_bg_color = VT_BLACK,           \
     .default_fg_color = VT_WHITE,           \
     .cursor_color = VT_BRIGHT_GREEN,        \
+    .blinking_cursor_color = VT_BRIGHT_YELLOW, \
     .cursor_char_color = VT_BLACK,          \
     .automatic_cursor = true,               \
     .bold_is_bright = true,                 \
@@ -150,9 +152,10 @@ typedef struct VTEvent {
 typedef struct VT VT;
 
 typedef struct VTCursor {
-    bool   visible;
-    int    row;
-    int    column;
+    INT  row;
+    INT  column;
+    bool visible;
+    bool blinking;
 } VTCursor;
 
 //

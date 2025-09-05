@@ -29,13 +29,13 @@ typedef struct VT {
     // terminal state
     VTCell*    matrix;
     VTCursor   cursor;
+    VTCursor   cursor_saved;
     VTAttrib   current_attrib;
     INT        scroll_area_top;
     INT        scroll_area_bottom;
     bool       acs_mode;
     bool       insert_mode;
     bool       cursor_app_mode;
-    bool       keypad_app_mode;
 
     // escape sequence parsing
     char       esc_buffer[32];
@@ -56,7 +56,8 @@ VT* vt_new(INT rows, INT columns, VTConfig const* config, void* data)
     VT* vt = calloc(1, sizeof(VT));
     vt->rows = rows;
     vt->columns = columns;
-    vt->cursor = (VTCursor) { .column = 0, .row = 0, .visible = true };
+    vt->cursor = (VTCursor) { .column = 0, .row = 0, .visible = true, .blinking = false };
+    vt->cursor_saved = vt->cursor;
     vt->config = *config;
     vt->current_attrib = DEFAULT_ATTR;
     vt->scroll_area_top = 0;
@@ -85,7 +86,8 @@ void vt_free(VT* vt)
 
 void vt_reset(VT* vt)
 {
-    vt->cursor = (VTCursor) { .column = 0, .row = 0, .visible = true };
+    vt->cursor = (VTCursor) { .column = 0, .row = 0, .visible = true, .blinking = false };
+    vt->cursor_saved = vt->cursor;
     vt->current_attrib = DEFAULT_ATTR;
     vt->scroll_area_top = 0;
     vt->scroll_area_bottom = vt->rows - 1;
@@ -505,18 +507,23 @@ static void escape_seq_clear_cells(VT* vt, char mode, int parameter)
     }
 }
 
-static void xterm_escape_seq(VT* vt, char mode, INT arg0, INT arg1)
+static void xterm_escape_seq(VT* vt, char mode, INT arg)
 {
     (void) mode;
-    (void) arg1;
 
-    bool enable = mode == 'h';
+    bool enable = (mode == 'h');
 
-    switch (arg0) {
+    switch (arg) {
         case 1:  // application mode
             vt->cursor_app_mode = enable;
             break;
         case 3:  // ignore for now - configuration
+            break;
+        case 12:
+            vt->cursor.blinking = enable;
+            break;
+        case 25:
+            vt->cursor.visible = enable;
             break;
         case 69:  // ignore for now - margins
             break;
@@ -539,8 +546,8 @@ static bool parse_escape_seq(VT* vt)
 #define N(n) ((n) == 0 ? 1 : (n))
 #define MATCH(pattern) match_escape_seq(vt, vt->esc_buffer, pattern, args, &argn)
 
-    if (MATCH("\e[?%%h"))       { xterm_escape_seq(vt, 'h', args[0], args[1]); T }    // do nothing for now (Xterm extension)
-    if (MATCH("\e[?%%l"))       { xterm_escape_seq(vt, 'l', args[0], args[1]); T }    // do nothing for now (Xterm extension)
+    if (MATCH("\e[?%%h"))       { xterm_escape_seq(vt, 'h', args[0]); if (args[1] != 0) xterm_escape_seq(vt, 'h', args[1]); T }
+    if (MATCH("\e[?%%l"))       { xterm_escape_seq(vt, 'l', args[0]); if (args[1] != 0) xterm_escape_seq(vt, 'l', args[1]); T }
     if (MATCH("\e[%%%t"))       { T }    // do nothing for now (Xterm extension)
     if (MATCH("\e="))           { T }    // do nothing - not used anymore - keypad related
     if (MATCH("\e>"))           { T }    // do nothing - not used anymore - keypad related
@@ -570,6 +577,8 @@ static bool parse_escape_seq(VT* vt)
     if (MATCH("\e(0"))          { vt->acs_mode = true; T }
     if (MATCH("\e(B"))          { vt->acs_mode = false; T }
 
+    if (MATCH("\e7"))           { vt->cursor_saved = vt->cursor; }
+    if (MATCH("\e8"))           { vt->cursor = vt->cursor_saved; }
     if (MATCH("\ec"))           { vt_reset(vt); T }
     if (MATCH("\e[!p"))         { T }  // soft reset
 
@@ -730,10 +739,9 @@ VTCell vt_char(VT* vt, INT row, INT column)
 
     VTCell ch = vt->matrix[row * vt->columns + column];
 
-    if (vt->cursor.visible && vt->cursor.row == row && vt->config.automatic_cursor && (
-        vt->cursor.column == column || (column == vt->columns - 1 && vt->cursor.column == vt->columns)
-    )) {
-        ch.attrib.bg_color = vt->config.cursor_color;
+    if (vt->cursor.visible && vt->cursor.row == row && vt->config.automatic_cursor &&
+            (vt->cursor.column == column || (column == vt->columns - 1 && vt->cursor.column == vt->columns))) {
+        ch.attrib.bg_color = vt->cursor.blinking ? vt->config.blinking_cursor_color : vt->config.cursor_color;
         ch.attrib.fg_color = vt->config.cursor_char_color;
     }
 

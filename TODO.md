@@ -24,16 +24,16 @@ TODO:
             enter_am_mode=\E[?7h,
             exit_alt_charset_mode=\E(B,
             exit_am_mode=\E[?7l,
+    - [x] Functions/escape sequences controlling cursor
+      cursor_invisible=\E[?25l,
+      cursor_normal=\E[?12l\E[?25h,
+      cursor_visible=\E[?12;25h,
+      restore_cursor=\E8,
+      save_cursor=\E7,
   - [ ] Functions/escape sequences controlling save states
             enter_ca_mode=\E[?1049h,
             exit_ca_mode=\E[?1049l,
   - [ ] Functions/escape sequences controlling mouse
-  - [ ] Functions/escape sequences controlling cursor
-            cursor_invisible=\E[?25l,
-            cursor_normal=\E[?12l\E[?25h,
-            cursor_visible=\E[?12;25h,
-            restore_cursor=\E8,
-            save_cursor=\E7,
   - [ ] Other functions
             flash_screen=\E[?5h$<100/>\E[?5l,
   - [ ] Make applications work
