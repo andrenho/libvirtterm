@@ -1,6 +1,5 @@
 #include "libvirtterm.h"
 
-#include <assert.h>
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -184,7 +183,12 @@ static void vt_set_ch(VT* vt, INT row, INT column, CHAR c)
 {
     row = MAX(MIN(row, vt->rows - 1), 0);
     column = MAX(MIN(column, vt->columns - 1), 0);
-    assert(row * vt->columns + column < vt->rows * vt->columns);
+
+    if (row * vt->columns + column >= vt->rows * vt->columns && vt->config.debug >= VT_DEBUG_ERRORS_ONLY) {
+        fprintf(stderr, "vt_set_ch: trying write data outside of screen bounds");
+        return;
+    }
+
     vt->matrix[row * vt->columns + column] = (VTCell) {
         .ch = c,
         .attrib = vt->current_attrib,
@@ -198,14 +202,17 @@ static void vt_memset_ch(VT* vt, INT row_start, INT row_end, INT column_start, I
     column_start = MIN(MAX(column_start, 0), vt->columns - 1);
     column_end = MIN(MAX(column_end, 0), vt->columns - 1);
 
-    if (row_start > row_end || (row_start == row_end) && column_start > column_end)
+    if ((row_start > row_end || row_start == row_end) && column_start > column_end)
         return;
 
-    size_t start = row_start * vt->columns + column_start;
-    size_t end = row_end * vt->columns + column_end;
+    INT start = row_start * vt->columns + column_start;
+    INT end = row_end * vt->columns + column_end;
 
-    for (size_t i = start; i <= end; ++i) {
-        assert(i < vt->rows * vt->columns);
+    for (INT i = start; i <= end; ++i) {
+        if (i >= vt->rows * vt->columns && vt->config.debug >= VT_DEBUG_ERRORS_ONLY) {
+            fprintf(stderr, "vt_memset_ch: trying write data outside of screen bounds");
+            return;
+        }
         vt->matrix[i] = (VTCell) { .ch = c, .attrib = vt->current_attrib };
     }
 }
@@ -215,19 +222,26 @@ static void vt_memmove(VT* vt, INT row_start, INT row_end, INT column_start, INT
     row_start = MIN(MAX(row_start, 0), vt->rows - 1);
     row_end = MIN(MAX(row_end, 0), vt->rows - 1);
     column_start = MIN(MAX(column_start, 0), vt->columns - 1);
-    column_end = MIN(MAX(column_end, 0), vt->columns);
+    column_end = MIN(MAX(column_end, 0), vt->columns - 1);
 
     if (row_start > row_end || column_start > column_end)
         return;
 
-    size_t start = row_start * vt->columns + column_start;
-    size_t end = row_end * vt->columns + column_end;
-    size_t dest = (row_start + n_rows) * vt->columns + (column_start + n_columns);
-    size_t size = end - start;
-    size_t past_the_end = vt->columns * vt->rows;
+    INT start = row_start * vt->columns + column_start;
+    INT end = row_end * vt->columns + column_end;
+    INT dest = (row_start + n_rows) * vt->columns + (column_start + n_columns);
+    INT size = end - start + 1;
+    INT past_the_end = vt->columns * vt->rows;
 
-    assert(dest + size < past_the_end);
-    assert(start + size < past_the_end);
+    if ((dest + size < 0 || start + size <0 ) && vt->config.debug >= VT_DEBUG_ERRORS_ONLY) {
+        fprintf(stderr, "vt_memmove: trying to move data before screen start");
+        return;
+    }
+
+    if ((dest + size > past_the_end || start + size > past_the_end) && vt->config.debug >= VT_DEBUG_ERRORS_ONLY) {
+        fprintf(stderr, "vt_memmove: trying to move data past of screen end");
+        return;
+    }
 
     memmove(&vt->matrix[dest], &vt->matrix[start], size * sizeof(VTCell));
 }
@@ -289,13 +303,11 @@ static void vt_scroll_vertical(VT* vt, INT top_row, INT bottom_row, INT rows_for
     if (rows_forward == 0)
         return;
 
-    vt_memmove(vt, top_row + rows_forward, bottom_row, 0, vt->columns - 1, -rows_forward, 0);
     if (rows_forward > 0) {
-        // clear rows at the bottom
+        vt_memmove(vt, top_row + rows_forward, bottom_row, 0, vt->columns - 1, -rows_forward, 0);
         vt_memset_ch(vt, bottom_row - rows_forward + 1, bottom_row, 0, vt->columns - 1, ' ');
-    }
-    else {
-        // clear rows at the top
+    } else {
+        // TODO
         vt_memset_ch(vt, top_row, top_row + rows_forward - 1, 0, vt->columns - 1, ' ');
     }
 
@@ -507,6 +519,9 @@ static void escape_seq_clear_cells(VT* vt, char mode, int parameter)
 
 static void xterm_escape_seq(VT* vt, char mode, INT arg0, INT arg1)
 {
+    (void) mode;
+    (void) arg1;
+
     switch (arg0) {
     }
 
@@ -685,7 +700,11 @@ void vt_write(VT* vt, const char* str, size_t str_sz)
 
 VTCell vt_char(VT* vt, INT row, INT column)
 {
-    assert(row * vt->columns + column < vt->rows * vt->columns);
+    if (row * vt->columns + column >= vt->rows * vt->columns && vt->config.debug >= VT_DEBUG_ERRORS_ONLY) {
+        fprintf(stderr, "vt_char: trying read data outside of screen bounds");
+        return (VTCell) { .ch = ' ', .attrib = DEFAULT_ATTR };
+    }
+
     VTCell ch = vt->matrix[row * vt->columns + column];
 
     if (vt->cursor.visible && vt->cursor.row == row && vt->config.automatic_cursor && (
