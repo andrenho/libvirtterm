@@ -10,19 +10,15 @@ TODO:
   - [x] Functions/escape sequences controlling scroll (including new line)
             enter_insert_mode=\E[4h,
             exit_insert_mode=\E[4l,
-            memory_lock=\El,
-            memory_unlock=\Em,
-            parm_index=\E[%p1%dS,
-            parm_rindex=\E[%p1%dT,
-  - [ ] Application mode
+  - [x] Application mode
     - ESC [ ? 1 h
     - ESC [ ? 1 l
-  - [ ] XTerm specific sequences
-  - [ ] Reset
+    - \E=
+    - \E>
+  - [x] Reset
             reset_1string=\Ec,
             reset_2string=\E[\041p\E[?3;4l\E[4l\E>,
   - [x] Functions/escape sequences controlling color and formatting (including true color)
-    - [ ] Blinking
   - [ ] Functions/escape sequences controlling alternate charsets
             enter_alt_charset_mode=\E(0,
             enter_am_mode=\E[?7h,
@@ -40,14 +36,16 @@ TODO:
             save_cursor=\E7,
   - [ ] Other functions
             flash_screen=\E[?5h$<100/>\E[?5l,
-  - [ ] Support for keypad
-            keypad_local=\E[?1l\E>,
-            keypad_xmit=\E[?1h\E=,
+  - [ ] Blinking
+  - [ ] XTerm specific sequences
   - [ ] Resize support
   - [ ] Functions/escape sequences for advanced xterm stuff
   - [ ] Unicode support
   - [ ] Selection support
 
+Maybe someday implement:
+    memory_lock=\El,
+    memory_unlock=\Em,
 
 Code organization:
   - Testing infrastructure
@@ -72,3 +70,5 @@ Code organization:
     user7=\E[6n,
     user8=\E[?1;2c,
     user9=\E[c,
+    parm_index=\E[%p1%dS,
+    parm_rindex=\E[%p1%dT,

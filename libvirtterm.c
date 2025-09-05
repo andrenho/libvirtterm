@@ -34,6 +34,8 @@ typedef struct VT {
     INT        scroll_area_bottom;
     bool       acs_mode;
     bool       insert_mode;
+    bool       cursor_app_mode;
+    bool       keypad_app_mode;
 
     // escape sequence parsing
     char       esc_buffer[32];
@@ -42,22 +44,6 @@ typedef struct VT {
     VTEvent*   event_queue_start;
     VTEvent*   event_queue_end;
 } VT;
-
-//
-// TERMINAL CAPABILITIES
-//
-
-#pragma region Terminal Capabilities
-
-// special characters
-#define BELL        7
-#define BACKSPACE   '\b'
-#define CR          '\r'
-#define LF          '\n'
-#define TAB         '\t'
-#define ESC         '\e'
-
-#pragma endregion
 
 //
 // INITIALIZATION
@@ -80,6 +66,7 @@ VT* vt_new(INT rows, INT columns, VTConfig const* config, void* data)
     vt->data = data;
     vt->acs_mode = false;
     vt->insert_mode = false;
+    vt->cursor_app_mode = false;
     memset(vt->esc_buffer, 0, sizeof vt->esc_buffer);
     vt_resize(vt, rows, columns);
     return vt;
@@ -104,6 +91,7 @@ void vt_reset(VT* vt)
     vt->scroll_area_bottom = vt->rows - 1;
     vt->acs_mode = false;
     vt->insert_mode = false;
+    vt->cursor_app_mode = false;
     for (int i = 0; i < vt->rows * vt->columns; ++i)
         vt->matrix[i] = (VTCell) { .ch = ' ', .attrib = DEFAULT_ATTR };
 }
@@ -522,13 +510,22 @@ static void xterm_escape_seq(VT* vt, char mode, INT arg0, INT arg1)
     (void) mode;
     (void) arg1;
 
-    switch (arg0) {
-        case 2004:  // ignore for now - Bracketed Paste Mode
-            return;
-    }
+    bool enable = mode == 'h';
 
-    if (vt->config.debug >= VT_DEBUG_ERRORS_ONLY)
-        fprintf(stderr, "Invalid/unsupported xterm escape sequence: (ESC)%s\n", &vt->esc_buffer[1]);
+    switch (arg0) {
+        case 1:  // application mode
+            vt->cursor_app_mode = enable;
+            break;
+        case 3:  // ignore for now - configuration
+            break;
+        case 69:  // ignore for now - margins
+            break;
+        case 2004:  // ignore for now - Bracketed Paste Mode
+            break;
+        default:
+            if (vt->config.debug >= VT_DEBUG_ERRORS_ONLY)
+                fprintf(stderr, "Invalid/unsupported xterm escape sequence: (ESC)%s\n", &vt->esc_buffer[1]);
+    }
 }
 
 static void vt_add_char(VT* vt, CHAR c);
@@ -566,15 +563,19 @@ static bool parse_escape_seq(VT* vt)
     if (MATCH("\e[%d"))         { vt_move_cursor_to(vt, args[0] - 1, vt->cursor.column); T }
     if (MATCH("\e[%e"))         { vt_cursor_advance(vt, N(args[0]), 0); T }
     if (MATCH("\e[%%f"))        { vt_move_cursor_to(vt, args[0] - 1, args[1] - 1); T }
+    if (MATCH("\e[%%r"))        { vt_set_scoll_area(vt, N(args[0]) - 1, N(args[1]) - 1); T }
     if (MATCH("\e[4h"))         { vt->insert_mode = true; T }
     if (MATCH("\e[4l"))         { vt->insert_mode = false; T }
-    if (MATCH("\e[%%r"))        { vt_set_scoll_area(vt, N(args[0]) - 1, N(args[1]) - 1); T }
+
+    if (MATCH("\ec"))           { vt_reset(vt); T }
+    if (MATCH("\e[!p"))         { T }  // soft reset
 
     if (MATCH("\eM")) {
         if (vt->cursor.row == 0)
             vt_scroll_vertical(vt, vt->scroll_area_top, vt->scroll_area_bottom, -1);
         else
             vt_cursor_advance(vt, -1, 0);
+        T
     }
 
     if (MATCH("\e[%%%m")) {
@@ -660,26 +661,26 @@ static void vt_add_char(VT* vt, CHAR c)
     }
 
     switch (c) {
-        case CR:
+        case '\r':  // CR
             vt_cursor_to_bol(vt);
             break;
-        case LF:
+        case '\n':  // LF
             vt_cursor_advance(vt, 1, 0);
             if (vt->cursor.row > vt->scroll_area_bottom) {
                 vt_scroll_vertical(vt, vt->scroll_area_top, vt->scroll_area_bottom, 1);
                 vt_cursor_advance(vt, -1, 0);
             }
             break;
-        case BACKSPACE:
+        case '\b':
             vt_cursor_advance(vt, 0, -1);
             break;
-        case TAB:
+        case '\t':
             vt_cursor_tab(vt);
             break;
-        case BELL:
+        case 7: // BELL
             vt_beep(vt);
             break;
-        case ESC:
+        case '\e':
             vt_start_escape_seq(vt, c);
             break;
         default:
@@ -881,6 +882,15 @@ int vt_translate_key(VT* vt, uint16_t key, bool shift, bool ctrl, char* output, 
     if (key == '\r') {
         output[0] = '\n';
         return 1;
+    }
+
+    if (vt->cursor_app_mode) {
+        switch (key) {
+            case VT_ARROW_UP:    return sprintf(output, "\eOA");
+            case VT_ARROW_DOWN:  return sprintf(output, "\eOB");
+            case VT_ARROW_RIGHT: return sprintf(output, "\eOC");
+            case VT_ARROW_LEFT:  return sprintf(output, "\eOD");
+        }
     }
 
 #define CHECK_KBD(SHIFT, CTRL, ARRAY) \
