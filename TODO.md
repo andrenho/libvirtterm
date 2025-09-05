@@ -30,16 +30,16 @@ TODO:
       cursor_visible=\E[?12;25h,
       restore_cursor=\E8,
       save_cursor=\E7,
-  - [ ] Functions/escape sequences controlling save states
+  - [x] Functions/escape sequences controlling save states
             enter_ca_mode=\E[?1049h,
             exit_ca_mode=\E[?1049l,
-  - [ ] Functions/escape sequences controlling mouse
   - [ ] Other functions
             flash_screen=\E[?5h$<100/>\E[?5l,
   - [ ] Make applications work
     - [x] vim
     - [x] top
     - [ ] curses
+      - [ ] Functions/escape sequences controlling mouse
     - [ ] htop
     - [ ] dialog
     - [ ] cmatrix
