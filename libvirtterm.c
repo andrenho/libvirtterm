@@ -606,7 +606,6 @@ static bool parse_escape_seq(VT* vt)
     }
 
     if (MATCH("\e[%%%m")) {
-        update_current_attrib(vt, 0);
         for (int i = 0; i < argn; ++i)
             if (i == 0 || (i > 0 && args[i] != 0))
                 update_current_attrib(vt, args[i]);
