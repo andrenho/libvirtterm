@@ -568,6 +568,13 @@ static bool parse_escape_seq(VT* vt)
     if (MATCH("\e[4l"))         { vt->insert_mode = false; T }
     if (MATCH("\e[%%r"))        { vt_set_scoll_area(vt, N(args[0]) - 1, N(args[1]) - 1); T }
 
+    if (MATCH("\eM")) {
+        if (vt->cursor.row == 0)
+            vt_scroll_vertical(vt, vt->scroll_area_top, vt->scroll_area_bottom, -1);
+        else
+            vt_cursor_advance(vt, -1, 0);
+    }
+
     if (MATCH("\e[%%%m")) {
         update_current_attrib(vt, 0);
         for (int i = 0; i < argn; ++i)

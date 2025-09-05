@@ -116,5 +116,9 @@ int main()
     ACH(0, 1, '0') ACU(9, 19)                         // no scroll for now
     W("x") ACH(0, 1, '1') ACH(9, 0, 'x') ACU(9, 1)   // scroll
 
+    // page scroll up
+    R W("0123456789abcdefghij\EH")
+
+
     vt_free(vt);
 }
