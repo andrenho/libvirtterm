@@ -558,8 +558,8 @@ static bool parse_escape_seq(VT* vt)
     if (MATCH("\e[%%H"))        { vt_move_cursor_to(vt, args[0] - 1, args[1] - 1); T }
     if (MATCH("\e[%K"))         { escape_seq_clear_cells(vt, 'K', args[0]); T }
     if (MATCH("\e[%J"))         { escape_seq_clear_cells(vt, 'J', args[0]); T }
-    if (MATCH("\e[%L"))         { vt_scroll_vertical(vt, vt->scroll_area_top, vt->scroll_area_bottom, N(args[0])); T }
-    if (MATCH("\e[%M"))         { vt_scroll_vertical(vt, vt->scroll_area_top, vt->scroll_area_bottom, -N(args[0])); T }
+    if (MATCH("\e[%L"))         { vt_scroll_vertical(vt, vt->cursor.row, vt->scroll_area_bottom, -N(args[0])); T }
+    if (MATCH("\e[%M"))         { vt_scroll_vertical(vt, vt->cursor.row, vt->scroll_area_bottom, N(args[0])); T }
     if (MATCH("\e[%P"))         { vt_scroll_horizontal(vt, vt->cursor.row, vt->cursor.column, -N(args[0])); T }
     if (MATCH("\e[%X"))         { for (INT i = 0; i < N(args[0]); ++i) vt_add_char(vt, ' '); T }
     if (MATCH("\e[%a"))         { vt_cursor_advance(vt, 0, N(args[0])); T }
