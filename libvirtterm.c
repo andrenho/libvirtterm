@@ -523,6 +523,8 @@ static void xterm_escape_seq(VT* vt, char mode, INT arg0, INT arg1)
     (void) arg1;
 
     switch (arg0) {
+        case 2004:  // ignore for now - Bracketed Paste Mode
+            return;
     }
 
     if (vt->config.debug >= VT_DEBUG_ERRORS_ONLY)
