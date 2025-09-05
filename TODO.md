@@ -19,7 +19,7 @@ TODO:
             reset_1string=\Ec,
             reset_2string=\E[\041p\E[?3;4l\E[4l\E>,
   - [x] Functions/escape sequences controlling color and formatting (including true color)
-  - [ ] Functions/escape sequences controlling alternate charsets
+  - [x] Functions/escape sequences controlling alternate charsets
             enter_alt_charset_mode=\E(0,
             enter_am_mode=\E[?7h,
             exit_alt_charset_mode=\E(B,
@@ -36,12 +36,25 @@ TODO:
             save_cursor=\E7,
   - [ ] Other functions
             flash_screen=\E[?5h$<100/>\E[?5l,
+  - [ ] Make applications work
+    - [x] vim
+    - [x] top
+    - [ ] curses
+    - [ ] htop
+    - [ ] dialog
+    - [ ] cmatrix
+    - [ ] mc
+    - [ ] tmux
+    - [ ] ncdu
+    - [ ] hollywood
   - [ ] Blinking
   - [ ] XTerm specific sequences
   - [ ] Resize support
   - [ ] Functions/escape sequences for advanced xterm stuff
   - [ ] Unicode support
   - [ ] Selection support
+  - [ ] 256 color support
+  - [ ] icons on console (lsd)
 
 Maybe someday implement:
     memory_lock=\El,
