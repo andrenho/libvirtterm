@@ -52,6 +52,7 @@ TODO:
   - [ ] XTerm specific sequences
   - [ ] Resize support
   - [ ] Functions/escape sequences for advanced xterm stuff
+  - [ ] Application not exiting on exit
   - [ ] Unicode support
   - [ ] Selection support
   - [ ] 256 color support
