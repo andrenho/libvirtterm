@@ -233,7 +233,7 @@ static void vt_memmove(VT* vt, INT row_start, INT row_end, INT column_start, INT
     INT size = end - start + 1;
     INT past_the_end = vt->columns * vt->rows;
 
-    if ((dest + size < 0 || start + size <0 ) && vt->config.debug >= VT_DEBUG_ERRORS_ONLY) {
+    if ((dest + size < 0 || start + size < 0) && vt->config.debug >= VT_DEBUG_ERRORS_ONLY) {
         fprintf(stderr, "vt_memmove: trying to move data before screen start");
         return;
     }
@@ -307,8 +307,8 @@ static void vt_scroll_vertical(VT* vt, INT top_row, INT bottom_row, INT rows_for
         vt_memmove(vt, top_row + rows_forward, bottom_row, 0, vt->columns - 1, -rows_forward, 0);
         vt_memset_ch(vt, bottom_row - rows_forward + 1, bottom_row, 0, vt->columns - 1, ' ');
     } else {
-        // TODO
-        vt_memset_ch(vt, top_row, top_row + rows_forward - 1, 0, vt->columns - 1, ' ');
+        vt_memmove(vt, top_row, bottom_row + rows_forward, 0, vt->columns - 1, -rows_forward, 0);
+        vt_memset_ch(vt, top_row, top_row - rows_forward - 1, 0, vt->columns - 1, ' ');
     }
 
     // report events
@@ -318,23 +318,23 @@ static void vt_scroll_vertical(VT* vt, INT top_row, INT bottom_row, INT rows_for
     });
 }
 
-static void vt_scroll_horizontal(VT* vt, INT row, INT start_column, INT end_column, INT columns_forward)
+static void vt_scroll_horizontal(VT* vt, INT row, INT column, INT columns_forward)
 {
     if (columns_forward == 0)
         return;
 
     if (columns_forward > 0) {
-        vt_memmove(vt, row, row, start_column, end_column - columns_forward, 0, columns_forward);
-        vt_memset_ch(vt, row, row, start_column, start_column + columns_forward - 1, ' ');
+        vt_memmove(vt, row, row, column, vt->columns - 1 - columns_forward, 0, columns_forward);
+        vt_memset_ch(vt, row, row, column, column + columns_forward - 1, ' ');
     } else if (columns_forward < 0) {
-        vt_memmove(vt, row, row, start_column - columns_forward, end_column + 1, 0, columns_forward);
-        vt_memset_ch(vt, row, row, end_column + columns_forward + 1, end_column, ' ');
+        vt_memmove(vt, row, row, column - columns_forward, vt->columns - 1, 0, columns_forward);
+        vt_memset_ch(vt, row, row, vt->columns + columns_forward, vt->columns - 1, ' ');
     }
 
     // report events
     vt_add_event(vt, &(VTEvent) {
         .type = VT_EVENT_CELLS_UPDATED,
-        .cells = { .row_start = row, .row_end = row, .column_start = MIN(start_column, start_column + columns_forward), .column_end = MAX(end_column, end_column + columns_forward) },
+        .cells = { .row_start = row, .row_end = row, .column_start = column, .column_end = vt->columns - 1 },
     });
 }
 
@@ -545,7 +545,7 @@ static bool parse_escape_seq(VT* vt)
     if (MATCH("\e[%%%t"))       { T }    // do nothing for now (Xterm extension)
     if (MATCH("\e="))           { T }    // do nothing - not used anymore - keypad related
     if (MATCH("\e>"))           { T }    // do nothing - not used anymore - keypad related
-    if (MATCH("\e[%@"))         { vt_scroll_horizontal(vt, vt->cursor.row, vt->cursor.column, vt->columns - 1, N(args[0])); T }
+    if (MATCH("\e[%@"))         { vt_scroll_horizontal(vt, vt->cursor.row, vt->cursor.column, N(args[0])); T }
     if (MATCH("\e[%A"))         { vt_cursor_advance(vt, -N(args[0]), 0); T }
     if (MATCH("\e[%B"))         { vt_cursor_advance(vt, N(args[0]), 0); T }
     if (MATCH("\e[%C"))         { vt_cursor_advance(vt, 0, N(args[0])); T }
@@ -558,7 +558,7 @@ static bool parse_escape_seq(VT* vt)
     if (MATCH("\e[%J"))         { escape_seq_clear_cells(vt, 'J', args[0]); T }
     if (MATCH("\e[%L"))         { vt_scroll_vertical(vt, vt->scroll_area_top, vt->scroll_area_bottom, N(args[0])); T }
     if (MATCH("\e[%M"))         { vt_scroll_vertical(vt, vt->scroll_area_top, vt->scroll_area_bottom, -N(args[0])); T }
-    if (MATCH("\e[%P"))         { vt_scroll_horizontal(vt, vt->cursor.row, vt->cursor.column, vt->columns - 1, -N(args[0])); T }
+    if (MATCH("\e[%P"))         { vt_scroll_horizontal(vt, vt->cursor.row, vt->cursor.column, -N(args[0])); T }
     if (MATCH("\e[%X"))         { for (INT i = 0; i < N(args[0]); ++i) vt_add_char(vt, ' '); T }
     if (MATCH("\e[%a"))         { vt_cursor_advance(vt, 0, N(args[0])); T }
     if (MATCH("\e[%d"))         { vt_move_cursor_to(vt, args[0] - 1, vt->cursor.column); T }
@@ -629,7 +629,7 @@ static void vt_add_regular_char(VT* vt, CHAR c)
 {
     vt_scroll_based_on_cursor(vt);
     if (vt->insert_mode)
-        vt_scroll_horizontal(vt, vt->cursor.row, vt->cursor.column, vt->columns - 1, 1);
+        vt_scroll_horizontal(vt, vt->cursor.row, vt->cursor.column, 1);
     vt_set_ch(vt, vt->cursor.row, vt->cursor.column, c);
     vt_add_event(vt, &(VTEvent) {
         .type = VT_EVENT_CELLS_UPDATED,

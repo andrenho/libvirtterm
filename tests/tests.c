@@ -70,7 +70,7 @@ int main()
     vt_memmove(vt, 2, 2, 2, 3, -2, 0);
     CMP(0, 0, "  xx")
 
-    // test vertical scroll
+    // vertical scroll
     R W("aaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbb")  // 2 lines
     for (int i = 0; i < 8; ++i) {
         char buf[21] = {0}; memset(buf, i + '0', 20);
@@ -85,12 +85,18 @@ int main()
         char buf[21] = {0}; memset(buf, i + '0', 20);
         W(buf)
     }
-    P
     vt_scroll_vertical(vt, 0, 9, -2);
-    P
-    ACH(0, 0, ' ') ACH(0, 19, ' ') ACH(2, 0, 'a') ACH(2, 19, 'a') ACH(9, 0, '5') ACH(9, 19, '5')
+    ACH(0, 0, ' ') ACH(0, 19, ' ') ACH(1, 0, ' ') ACH(2, 0, 'a') ACH(2, 19, 'a') ACH(9, 0, '5') ACH(9, 19, '5')
 
-#if 0
+    // horizontal scroll
+    R W("0123456789abcdefghij")
+    vt_scroll_horizontal(vt, 0, 3, 2);
+    CMP(0, 0, "012  3456789abcdefgh") ACH(1, 0, ' ')
+
+    R W("0123456789abcdefghij")
+    vt_scroll_horizontal(vt, 0, 3, -2);
+    CMP(0, 0, "01256789abcdefghij  ") ACH(1, 0, ' ')
+
     // test end of line, and skip to next line
     R W("0123456789012345678") ACH(0, 18, '8') ACU(0, 19)
       W("9") ACH(0, 19, '9') ACU(0, 19)
@@ -109,7 +115,6 @@ int main()
     }
     ACH(0, 1, '0') ACU(9, 19)                         // no scroll for now
     W("x") ACH(0, 1, '1') ACH(9, 0, 'x') ACU(9, 1)   // scroll
-#endif
 
     vt_free(vt);
 }
