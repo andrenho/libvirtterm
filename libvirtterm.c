@@ -28,6 +28,7 @@ typedef struct VT {
 
     // terminal state
     VTCell*    matrix;
+    VTCell*    matrix_copy;
     VTCursor   cursor;
     VTCursor   cursor_saved;
     VTAttrib   current_attrib;
@@ -80,6 +81,7 @@ void vt_free(VT* vt)
     if (vt) {
         vt_free_event_queue(vt);
         free(vt->matrix);
+        free(vt->matrix_copy);
     }
     free(vt);
 }
@@ -96,6 +98,7 @@ void vt_reset(VT* vt)
     vt->cursor_app_mode = false;
     for (int i = 0; i < vt->rows * vt->columns; ++i)
         vt->matrix[i] = (VTCell) { .ch = ' ', .attrib = DEFAULT_ATTR };
+    memcpy(vt->matrix_copy, vt->matrix, vt->columns * vt->rows * sizeof(VTCell));
 }
 
 void vt_resize(VT* vt, INT rows, INT columns)
@@ -104,10 +107,13 @@ void vt_resize(VT* vt, INT rows, INT columns)
     vt->columns = columns;
 
     free(vt->matrix);
+    free(vt->matrix_copy);
 
     vt->matrix = malloc(sizeof(VTCell) * rows * columns);
+    vt->matrix_copy = malloc(sizeof(VTCell) * rows * columns);
     for (int i = 0; i < rows * columns; ++i)
         vt->matrix[i] = (VTCell) { .ch = ' ', .attrib = DEFAULT_ATTR };
+    memcpy(vt->matrix_copy, vt->matrix, vt->columns * vt->rows * sizeof(VTCell));
 
     // TODO - keep chars when resizing
 }
@@ -526,6 +532,15 @@ static void xterm_escape_seq(VT* vt, char mode, INT arg)
             vt->cursor.visible = enable;
             break;
         case 69:  // ignore for now - margins
+            break;
+        case 1049:  // alternate screen buffer
+            if (enable) {
+                memcpy(vt->matrix_copy, vt->matrix, vt->columns * vt->rows * sizeof(VTCell));
+                vt->cursor_saved = vt->cursor;
+            } else {
+                memcpy(vt->matrix, vt->matrix_copy, vt->columns * vt->rows * sizeof(VTCell));
+                vt->cursor = vt->cursor_saved;
+            }
             break;
         case 2004:  // ignore for now - Bracketed Paste Mode
             break;

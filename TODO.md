@@ -47,6 +47,7 @@ TODO:
     - [ ] tmux
     - [ ] ncdu
     - [ ] hollywood
+    - [ ] vttest
   - [ ] Blinking
   - [ ] XTerm specific sequences
   - [ ] Resize support
