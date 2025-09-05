@@ -567,6 +567,9 @@ static bool parse_escape_seq(VT* vt)
     if (MATCH("\e[4h"))         { vt->insert_mode = true; T }
     if (MATCH("\e[4l"))         { vt->insert_mode = false; T }
 
+    if (MATCH("\e(0"))          { vt->acs_mode = true; T }
+    if (MATCH("\e(B"))          { vt->acs_mode = false; T }
+
     if (MATCH("\ec"))           { vt_reset(vt); T }
     if (MATCH("\e[!p"))         { T }  // soft reset
 
@@ -635,8 +638,18 @@ static void vt_add_escape_char(VT* vt, char c)
 
 #pragma region Basic operation
 
+static CHAR translate_acs_char(VT* vt, CHAR c)
+{
+    if (c >= 0x60 && c <= 0x7e)
+        return vt->config.acs_chars[c - 0x60];
+    return c;
+}
+
 static void vt_add_regular_char(VT* vt, CHAR c)
 {
+    if (vt->acs_mode)
+        c = translate_acs_char(vt, c);
+
     vt_scroll_based_on_cursor(vt);
     if (vt->insert_mode)
         vt_scroll_horizontal(vt, vt->cursor.row, vt->cursor.column, 1);
