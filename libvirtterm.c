@@ -37,7 +37,9 @@ typedef struct VT {
     bool       acs_mode;
     bool       insert_mode;
     bool       cursor_app_mode;
+    bool       receiving_window_title;
     CHAR       last_char;
+    char*      window_title;
 
     // escape sequence parsing
     char       esc_buffer[32];
@@ -74,6 +76,8 @@ VT* vt_new(INT rows, INT columns, VTConfig const* config, void* data)
     vt->acs_mode = false;
     vt->insert_mode = false;
     vt->cursor_app_mode = false;
+    vt->receiving_window_title = false;
+    vt->window_title = NULL;
     memset(vt->esc_buffer, 0, sizeof vt->esc_buffer);
     vt_resize(vt, rows, columns);
     return vt;
@@ -83,6 +87,7 @@ void vt_free(VT* vt)
 {
     if (vt) {
         vt_free_event_queue(vt);
+        free(vt->window_title);
         free(vt->matrix);
         free(vt->matrix_copy);
     }
@@ -99,6 +104,9 @@ void vt_reset(VT* vt)
     vt->acs_mode = false;
     vt->insert_mode = false;
     vt->cursor_app_mode = false;
+    vt->receiving_window_title = false;
+    free(vt->window_title);
+    vt->window_title = NULL;
     for (int i = 0; i < vt->rows * vt->columns; ++i)
         vt->matrix[i] = (VTCell) { .ch = ' ', .attrib = DEFAULT_ATTR };
     memcpy(vt->matrix_copy, vt->matrix, vt->columns * vt->rows * sizeof(VTCell));
@@ -557,6 +565,12 @@ static bool match_escape_seq(VT* vt, const char* data, const char* pattern, INT 
 
 static bool parse_escape_seq(VT* vt)
 {
+#define T return true;
+#define N(n) ((n) == 0 ? 1 : (n))
+#define MATCH(pattern) match_escape_seq(vt, vt->esc_buffer, pattern, args, &argn)
+
+    if (strcmp(vt->esc_buffer, "\e]0;") == 0) { vt->receiving_window_title = true; T }
+
     size_t sz = strlen(vt->esc_buffer);
     char last_char = vt->esc_buffer[sz - 1];
     if (last_char == '\e' || last_char == ';' || last_char == '[')   // skip on the easy cases
@@ -564,10 +578,6 @@ static bool parse_escape_seq(VT* vt)
 
     INT args[8];
     int argn;
-
-#define T return true;
-#define N(n) ((n) == 0 ? 1 : (n))
-#define MATCH(pattern) match_escape_seq(vt, vt->esc_buffer, pattern, args, &argn)
 
     if (MATCH("\e[?%%h"))       { xterm_escape_seq(vt, 'h', args[0]); if (args[1] != 0) xterm_escape_seq(vt, 'h', args[1]); T }
     if (MATCH("\e[?%%l"))       { xterm_escape_seq(vt, 'l', args[0]); if (args[1] != 0) xterm_escape_seq(vt, 'l', args[1]); T }
@@ -736,12 +746,50 @@ static void vt_add_char(VT* vt, CHAR c)
         vt->last_char = c;
 }
 
+static void vt_add_to_window_title(VT* vt, CHAR c)
+{
+    if (vt->config.debug >= VT_DEBUG_ALL_BYTES) {
+        if (c >= 32 && c < 127)
+            printf("\e[0;34m%c\e[0m", c);
+        else
+            printf("\e[0;34m[%02X]\e[0m", c);
+        fflush(stdout);
+    }
+
+    if (vt->window_title == NULL) {
+        vt->window_title = calloc(1, 2);
+        vt->window_title[0] = (char) c;
+    } else {
+        size_t len = strlen(vt->window_title);
+        vt->window_title = realloc(vt->window_title, len + 2);
+        vt->window_title[len] = (char) c;
+        vt->window_title[len + 1] = 0;
+    }
+
+    size_t len = strlen(vt->window_title);
+    bool end = false;
+    if (vt->window_title[len - 1] == 0x7) {
+        vt->window_title[len - 1] = '\0';
+        end = true;
+    } else if (len >= 2 && vt->window_title[len - 2] == '\e' && vt->window_title[len -1] == '\\') {
+        vt->window_title[len - 2] = '\0';
+        end = true;
+    }
+
+    if (end) {
+        vt->receiving_window_title = false;
+        vt_add_event(vt, &(VTEvent) { .type = VT_EVENT_WINDOW_TITLE_UPDATED });
+    }
+}
+
 void vt_write(VT* vt, const char* str, size_t str_sz)
 {
     // parse characters
     for (size_t i = 0; i < str_sz; ++i) {
         CHAR c = str[i];
-        if (!vt->esc_buffer[0])   // not parsing escape sequence
+        if (vt->receiving_window_title)
+            vt_add_to_window_title(vt, c);
+        else if (!vt->esc_buffer[0])   // not parsing escape sequence
             vt_add_char(vt, c);
         else
             vt_add_escape_char(vt, c);
@@ -799,6 +847,11 @@ VTCursor vt_cursor(VT* vt)
     cursor.row = MIN(MAX(cursor.row, 0), vt->rows - 1);
     cursor.column = MIN(MAX(cursor.column, 0), vt->columns - 1);
     return cursor;
+}
+
+const char* vt_window_title(VT* vt)
+{
+    return vt->window_title;
 }
 
 #pragma endregion
