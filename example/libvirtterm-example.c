@@ -32,7 +32,7 @@ static SDL_Texture*     font;
 
 #define FONT_W 8
 #define FONT_H 15
-#define ZOOM 2.f
+#define ZOOM 1.f
 #define BORDER 16
 #define INPUT_BUFFER_SIZE (16*1024)
 
@@ -262,7 +262,7 @@ SDL_AppResult SDL_AppIterate(void *appstate)
             while (SDL_GetAudioStreamQueued(stream) < (int)wav_data_len)
                 SDL_PutAudioStreamData(stream, wav_data, wav_data_len);
         } else if (e.type == VT_EVENT_WINDOW_TITLE_UPDATED) {
-            SDL_SetWindowTitle(window, vt_window_title(vt));
+            SDL_SetWindowTitle(window, vt_last_text_received(vt));
         }
     }
 

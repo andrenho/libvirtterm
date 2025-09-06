@@ -43,7 +43,8 @@ TODO:
     - [x] cmatrix
     - [x] ncdu
     - [ ] mc
-      - [ ] update window title
+      - [x] update window title
+      - [ ] add text to the event (?)
     - [ ] tmux
     - [ ] hollywood
     - [ ] vttest

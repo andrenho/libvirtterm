@@ -19,6 +19,8 @@
 
 #define ACS_MIN 0x2b
 
+typedef enum VT_ReceivingTest { VTR_NO, VTR_WINDOW_TITLE, VTR_DIRECTORY_HINT } VT_ReceivingText;
+
 typedef struct VT {
     // terminal configuration
     INT        rows;
@@ -27,19 +29,19 @@ typedef struct VT {
     void*      data;
 
     // terminal state
-    VTCell*    matrix;
-    VTCell*    matrix_copy;
-    VTCursor   cursor;
-    VTCursor   cursor_saved;
-    VTAttrib   current_attrib;
-    INT        scroll_area_top;
-    INT        scroll_area_bottom;
-    bool       acs_mode;
-    bool       insert_mode;
-    bool       cursor_app_mode;
-    bool       receiving_window_title;
-    CHAR       last_char;
-    char*      window_title;
+    VTCell*          matrix;
+    VTCell*          matrix_copy;
+    VTCursor         cursor;
+    VTCursor         cursor_saved;
+    VTAttrib         current_attrib;
+    INT              scroll_area_top;
+    INT              scroll_area_bottom;
+    bool             acs_mode;
+    bool             insert_mode;
+    bool             cursor_app_mode;
+    VT_ReceivingText receiving_text;
+    CHAR             last_char;
+    char*            last_text_received;
 
     // escape sequence parsing
     char       esc_buffer[32];
@@ -76,8 +78,8 @@ VT* vt_new(INT rows, INT columns, VTConfig const* config, void* data)
     vt->acs_mode = false;
     vt->insert_mode = false;
     vt->cursor_app_mode = false;
-    vt->receiving_window_title = false;
-    vt->window_title = NULL;
+    vt->receiving_text = VTR_NO;
+    vt->last_text_received = NULL;
     memset(vt->esc_buffer, 0, sizeof vt->esc_buffer);
     vt_resize(vt, rows, columns);
     return vt;
@@ -87,7 +89,7 @@ void vt_free(VT* vt)
 {
     if (vt) {
         vt_free_event_queue(vt);
-        free(vt->window_title);
+        free(vt->last_text_received);
         free(vt->matrix);
         free(vt->matrix_copy);
     }
@@ -104,9 +106,9 @@ void vt_reset(VT* vt)
     vt->acs_mode = false;
     vt->insert_mode = false;
     vt->cursor_app_mode = false;
-    vt->receiving_window_title = false;
-    free(vt->window_title);
-    vt->window_title = NULL;
+    vt->receiving_text = VTR_NO;
+    free(vt->last_text_received);
+    vt->last_text_received = NULL;
     for (int i = 0; i < vt->rows * vt->columns; ++i)
         vt->matrix[i] = (VTCell) { .ch = ' ', .attrib = DEFAULT_ATTR };
     memcpy(vt->matrix_copy, vt->matrix, vt->columns * vt->rows * sizeof(VTCell));
@@ -383,6 +385,13 @@ static void vt_start_escape_seq(VT* vt, char c)
     vt->esc_buffer[0] = c;
 }
 
+static void vt_start_receiving_text(VT* vt, VT_ReceivingText r)
+{
+    free(vt->last_text_received);
+    vt->last_text_received = NULL;
+    vt->receiving_text = r;
+}
+
 static void update_current_attrib(VT* vt, int arg)
 {
     switch (arg) {
@@ -569,7 +578,8 @@ static bool parse_escape_seq(VT* vt)
 #define N(n) ((n) == 0 ? 1 : (n))
 #define MATCH(pattern) match_escape_seq(vt, vt->esc_buffer, pattern, args, &argn)
 
-    if (strcmp(vt->esc_buffer, "\e]0;") == 0) { vt->receiving_window_title = true; T }
+    if (strcmp(vt->esc_buffer, "\e]0;") == 0) { vt_start_receiving_text(vt, VTR_WINDOW_TITLE); T }
+    if (strcmp(vt->esc_buffer, "\e]7;") == 0) { vt_start_receiving_text(vt, VTR_DIRECTORY_HINT); T }
 
     size_t sz = strlen(vt->esc_buffer);
     char last_char = vt->esc_buffer[sz - 1];
@@ -756,29 +766,32 @@ static void vt_add_to_window_title(VT* vt, CHAR c)
         fflush(stdout);
     }
 
-    if (vt->window_title == NULL) {
-        vt->window_title = calloc(1, 2);
-        vt->window_title[0] = (char) c;
+    if (vt->last_text_received == NULL) {
+        vt->last_text_received = calloc(1, 2);
+        vt->last_text_received[0] = (char) c;
     } else {
-        size_t len = strlen(vt->window_title);
-        vt->window_title = realloc(vt->window_title, len + 2);
-        vt->window_title[len] = (char) c;
-        vt->window_title[len + 1] = 0;
+        size_t len = strlen(vt->last_text_received);
+        vt->last_text_received = realloc(vt->last_text_received, len + 2);
+        vt->last_text_received[len] = (char) c;
+        vt->last_text_received[len + 1] = 0;
     }
 
-    size_t len = strlen(vt->window_title);
+    size_t len = strlen(vt->last_text_received);
     bool end = false;
-    if (vt->window_title[len - 1] == 0x7) {
-        vt->window_title[len - 1] = '\0';
+    if (vt->last_text_received[len - 1] == 0x7) {
+        vt->last_text_received[len - 1] = '\0';
         end = true;
-    } else if (len >= 2 && vt->window_title[len - 2] == '\e' && vt->window_title[len -1] == '\\') {
-        vt->window_title[len - 2] = '\0';
+    } else if (len >= 2 && vt->last_text_received[len - 2] == '\e' && vt->last_text_received[len -1] == '\\') {
+        vt->last_text_received[len - 2] = '\0';
         end = true;
     }
 
     if (end) {
-        vt->receiving_window_title = false;
-        vt_add_event(vt, &(VTEvent) { .type = VT_EVENT_WINDOW_TITLE_UPDATED });
+        if (vt->receiving_text == VTR_WINDOW_TITLE)
+            vt_add_event(vt, &(VTEvent) { .type = VT_EVENT_WINDOW_TITLE_UPDATED });
+        if (vt->receiving_text == VTR_DIRECTORY_HINT)
+            vt_add_event(vt, &(VTEvent) { .type = VT_EVENT_DIRECTORY_HINT_UPDATED });
+        vt->receiving_text = VTR_NO;
     }
 }
 
@@ -787,7 +800,7 @@ void vt_write(VT* vt, const char* str, size_t str_sz)
     // parse characters
     for (size_t i = 0; i < str_sz; ++i) {
         CHAR c = str[i];
-        if (vt->receiving_window_title)
+        if (vt->receiving_text != VTR_NO)
             vt_add_to_window_title(vt, c);
         else if (!vt->esc_buffer[0])   // not parsing escape sequence
             vt_add_char(vt, c);
@@ -849,9 +862,9 @@ VTCursor vt_cursor(VT* vt)
     return cursor;
 }
 
-const char* vt_window_title(VT* vt)
+const char* vt_last_text_received(VT* vt)
 {
-    return vt->window_title;
+    return vt->last_text_received;
 }
 
 #pragma endregion
