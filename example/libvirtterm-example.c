@@ -34,7 +34,7 @@ static SDL_Texture*     font;
 #define FONT_H 15
 #define ZOOM 2.f
 #define BORDER 16
-#define INPUT_BUFFER_SIZE 16*1024
+#define INPUT_BUFFER_SIZE 1 // (16*1024)
 
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 {
