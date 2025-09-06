@@ -33,21 +33,25 @@ TODO:
   - [x] Functions/escape sequences controlling save states
             enter_ca_mode=\E[?1049h,
             exit_ca_mode=\E[?1049l,
-  - [ ] Other functions
-            flash_screen=\E[?5h$<100/>\E[?5l,
+  - [x] Add DEC chars
   - [ ] Make applications work
     - [x] vim
     - [x] top
-    - [ ] curses
-      - [ ] Functions/escape sequences controlling mouse
-    - [ ] htop
-    - [ ] dialog
-    - [ ] cmatrix
+    - [x] curses
+    - [x] htop
+    - [x] dialog
+    - [x] cmatrix
+    - [x] ncdu
     - [ ] mc
     - [ ] tmux
-    - [ ] ncdu
     - [ ] hollywood
     - [ ] vttest
+  - [ ] Mouse support
+    - [ ] ncurses
+    - [ ] Others (vim, etc)
+  - [ ] Other functions
+      flash_screen=\E[?5h$<100/>\E[?5l,
+  - [ ] Reduce CPU usage (use cmatrix as example)
   - [ ] Blinking
   - [ ] XTerm specific sequences
   - [ ] Resize support
@@ -57,6 +61,8 @@ TODO:
   - [ ] Selection support
   - [ ] 256 color support
   - [ ] icons on console (lsd)
+  - [ ] refactor example
+    - [ ] detect closing terminal
 
 Maybe someday implement:
     memory_lock=\El,

@@ -47,6 +47,10 @@ typedef struct VT {
     VTEvent*   event_queue_end;
 } VT;
 
+static void vt_add_char(VT* vt, CHAR c);
+static void vt_free_event_queue(VT*);
+
+
 //
 // INITIALIZATION
 //
@@ -74,8 +78,6 @@ VT* vt_new(INT rows, INT columns, VTConfig const* config, void* data)
     vt_resize(vt, rows, columns);
     return vt;
 }
-
-static void vt_free_event_queue(VT*);
 
 void vt_free(VT* vt)
 {
@@ -373,41 +375,6 @@ static void vt_start_escape_seq(VT* vt, char c)
     vt->esc_buffer[0] = c;
 }
 
-static bool match_escape_seq(VT* vt, const char* data, const char* pattern, INT args[8], int* argn)
-{
-    int i = 0;
-
-    *argn = 0;
-    memset(args, 0, sizeof args[0] * 8);
-
-    if (data[strlen(data) - 1] != pattern[strlen(pattern) - 1])  // fail fast
-        return false;
-
-    for (const char* p = pattern; *p; ++p) {
-        while (data[i] == ';')
-            ++i;
-        if (*p == '%') {
-            char* endptr;
-            args[(*argn)++] = strtol(&data[i], &endptr, 10);
-            i = endptr - data;
-        } else if (*p != data[i] && data[i] != ';') {
-            return false;
-        } else {
-            ++i;
-        }
-    }
-
-    if (i == (int) strlen(data)) {
-        if (vt->config.debug >= VT_DEBUG_ALL_ESCAPE_SEQUENCES) {
-            printf("\e[0;35m\\e%s\e[0m", &data[1]);
-            fflush(stdout);
-        }
-        return true;
-    } else {
-        return false;
-    }
-}
-
 static void update_current_attrib(VT* vt, int arg)
 {
     switch (arg) {
@@ -551,10 +518,50 @@ static void xterm_escape_seq(VT* vt, char mode, INT arg)
     }
 }
 
-static void vt_add_char(VT* vt, CHAR c);
+static bool match_escape_seq(VT* vt, const char* data, const char* pattern, INT args[8], int* argn)
+{
+    int i = 0;
+
+    *argn = 0;
+    memset(args, 0, sizeof args[0] * 8);
+
+    // fail fast if last char doesn't match
+    char last_char_of_pattern = pattern[strlen(pattern) - 1];
+    if (data[strlen(data) - 1] != last_char_of_pattern)
+        return false;
+
+    for (const char* p = pattern; *p; ++p) {
+        if (*p == '%') {                                            // matches a number - converts it and skip to next non-number char
+            char* endptr;
+            args[(*argn)++] = strtol(&data[i], &endptr, 10);  // convert number
+            i = endptr - data;
+            while (data[i] == ';')                                  // skip ';' separators
+                ++i;
+        } else if (*p != data[i] && data[i] != ';') {               // match failed (ignore ';' as it's not part of the match)
+            return false;
+        } else {                                                    // character matches - skip to the next char
+            ++i;
+        }
+    }
+
+    if (i == (int) strlen(data)) {                                  // did we match the whole input?
+        if (vt->config.debug >= VT_DEBUG_ALL_ESCAPE_SEQUENCES) {
+            printf("\e[0;35m\\e%s\e[0m", &data[1]);
+            fflush(stdout);
+        }
+        return true;
+    } else {
+        return false;
+    }
+}
 
 static bool parse_escape_seq(VT* vt)
 {
+    size_t sz = strlen(vt->esc_buffer);
+    char last_char = vt->esc_buffer[sz - 1];
+    if (last_char == '\e' || last_char == ';' || last_char == '[')   // skip on the easy cases
+        return false;
+
     INT args[8];
     int argn;
 
@@ -587,11 +594,7 @@ static bool parse_escape_seq(VT* vt)
     if (MATCH("\e[%e"))         { vt_cursor_advance(vt, N(args[0]), 0); T }
     if (MATCH("\e[%%f"))        { vt_move_cursor_to(vt, args[0] - 1, args[1] - 1); T }
     if (MATCH("\e[%%r"))        { vt_set_scoll_area(vt, N(args[0]) - 1, N(args[1]) - 1); T }
-    if (MATCH("\e[%b")) {
-        INT n = N(args[0]);
-        for (INT i = 0; i < n; ++i)
-            vt_add_char(vt, vt->last_char);
-    }
+    if (MATCH("\e[%b"))         { INT n = N(args[0]); for (INT i = 0; i < n; ++i) vt_add_char(vt, vt->last_char); T }
     if (MATCH("\e[4h"))         { vt->insert_mode = true; T }
     if (MATCH("\e[4l"))         { vt->insert_mode = false; T }
 

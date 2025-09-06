@@ -32,7 +32,7 @@ static SDL_Texture*     font;
 
 #define FONT_W 8
 #define FONT_H 15
-#define ZOOM 1.f
+#define ZOOM 2.f
 #define BORDER 16
 #define INPUT_BUFFER_SIZE 16*1024
 
@@ -76,6 +76,9 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     SDL_AudioSpec spec;
     char* wav_path;
     SDL_asprintf(&wav_path, "%sbeep.wav", SDL_GetBasePath());
+    SDL_asprintf(&wav_path, "%sbeep.wav", SDL_GetBasePath());
+    SDL_asprintf(&wav_path, "%sbeep.wav", SDL_GetBasePath());
+    SDL_asprintf(&wav_path, "%sbeep.wav", SDL_GetBasePath());
     if (!SDL_LoadWAV(wav_path, &spec, &wav_data, &wav_data_len)) {
         SDL_Log("Couldn't load .wav file: %s", SDL_GetError());
         return SDL_APP_FAILURE;
@@ -96,6 +99,31 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     SDL_GetWindowSize(window, &w, &h);
     VTConfig config = VT_DEFAULT_CONFIG;
     config.debug = VT_DEBUG_ALL_BYTES;
+    config.acs_chars[0x00] = 0x4;   // diamond
+    config.acs_chars[0x01] = 0xb0;  // checkerbox
+    config.acs_chars[0x06] = 0xf8;  // degree
+    config.acs_chars[0x07] = 0xf1;  // plus-minus
+    config.acs_chars[0x0a] = 0xd9;  // bottom right corner
+    config.acs_chars[0x0b] = 0xbf;  // top right corner
+    config.acs_chars[0x0c] = 0xda;  // top left corner
+    config.acs_chars[0x0d] = 0xc0;  // bottom left corner
+    config.acs_chars[0x0e] = 0xc5;  // cross
+    config.acs_chars[0x0f] = 0xdf;  // upper line
+    config.acs_chars[0x10] = 0xc4;  // middle to upper line
+    config.acs_chars[0x11] = 0xc4;  // middle line
+    config.acs_chars[0x12] = 0xc4;  // middle to lower line
+    config.acs_chars[0x13] = '_';   // lower line
+    config.acs_chars[0x14] = 0xc3;  // right tee
+    config.acs_chars[0x15] = 0xb4;  // left tee
+    config.acs_chars[0x16] = 0xc1;  // up tee
+    config.acs_chars[0x17] = 0xc2;  // down tee
+    config.acs_chars[0x18] = 0xb3;  // vertical bar
+    config.acs_chars[0x19] = 0xf3;  // less than
+    config.acs_chars[0x1a] = 0xf2;  // more than
+    config.acs_chars[0x1b] = 0xe3;  // pi
+    config.acs_chars[0x1c] = 0xf0;  // not equals
+    config.acs_chars[0x1d] = 0x9c;  // pound sterling
+    config.acs_chars[0x1e] = 0xfa;  // center dot
     vt = vt_new((h - BORDER*2) / FONT_H / ZOOM, (w - BORDER*2) / FONT_W / ZOOM, &config, NULL);
 
     //
@@ -198,7 +226,7 @@ static void draw_char(size_t row, size_t column)
     SDL_RenderFillRect(ren, &dest);
 
     // draw character
-    if (chr.ch != 0 && chr.ch != ' ') {
+    if (chr.ch != 0) {
         SDL_Color fg = terminal_colors[chr.attrib.fg_color];
         if (chr.attrib.dim) { fg.r *= 0.6; fg.g *= 0.6; fg.b *= 0.6; }
         SDL_SetTextureColorMod(font, fg.r, fg.g, fg.b);

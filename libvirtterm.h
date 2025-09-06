@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#define CHAR char
+#define CHAR uint8_t
 #define INT  int16_t
 
 //
