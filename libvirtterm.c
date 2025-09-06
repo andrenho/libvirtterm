@@ -37,6 +37,7 @@ typedef struct VT {
     bool       acs_mode;
     bool       insert_mode;
     bool       cursor_app_mode;
+    CHAR       last_char;
 
     // escape sequence parsing
     char       esc_buffer[32];
@@ -586,6 +587,11 @@ static bool parse_escape_seq(VT* vt)
     if (MATCH("\e[%e"))         { vt_cursor_advance(vt, N(args[0]), 0); T }
     if (MATCH("\e[%%f"))        { vt_move_cursor_to(vt, args[0] - 1, args[1] - 1); T }
     if (MATCH("\e[%%r"))        { vt_set_scoll_area(vt, N(args[0]) - 1, N(args[1]) - 1); T }
+    if (MATCH("\e[%b")) {
+        INT n = N(args[0]);
+        for (INT i = 0; i < n; ++i)
+            vt_add_char(vt, vt->last_char);
+    }
     if (MATCH("\e[4h"))         { vt->insert_mode = true; T }
     if (MATCH("\e[4l"))         { vt->insert_mode = false; T }
 
@@ -722,6 +728,9 @@ static void vt_add_char(VT* vt, CHAR c)
         default:
             vt_add_regular_char(vt, c);
     }
+
+    if (c != '\e')
+        vt->last_char = c;
 }
 
 void vt_write(VT* vt, const char* str, size_t str_sz)
