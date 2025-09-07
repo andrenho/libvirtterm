@@ -1,6 +1,6 @@
 CPPFLAGS=-Wall -Wextra -Wno-sign-compare -std=c23 -g -O0 $(shell pkg-config --cflags sdl3)
 LDFLAGS=$(shell pkg-config --libs sdl3)
-OBJ=libvirtterm-example.o ../libvirtterm.o
+OBJ=libvirtterm-example.o ../libvirtterm.o ../libvirtterm_pty.o
 
 all: libvirtterm-example
 

@@ -130,9 +130,12 @@ typedef enum VTEventType {
     VT_EVENT_CELLS_UPDATED,
     VT_EVENT_CURSOR_MOVED,
     VT_EVENT_BELL,
-    VT_EVENT_WINDOW_TITLE_UPDATED,
-    VT_EVENT_DIRECTORY_HINT_UPDATED,
+    VT_EVENT_TEXT_RECEIVED,
 } VTEventType;
+
+typedef enum VTTextReceivedType {
+    VTT_NOT_RECEIVING, VTT_WINDOW_TITLE_UPDATED, VTT_DIRECTORY_HINT_UPDATED,
+} VTTextReceivedType;
 
 typedef struct VTEvent {
     VTEventType type;
@@ -143,6 +146,10 @@ typedef struct VTEvent {
             INT column_start;
             INT column_end;
         } cells;
+        struct {
+            VTTextReceivedType type;
+            const char*        text;
+        } text_received;
     };
     struct VTEvent* _next;
 } VTEvent;
@@ -165,7 +172,7 @@ typedef struct VTCursor {
 //
 
 // initialization
-VT*  vt_new(INT rows, INT columns, VTConfig const* config, void* data);
+VT*  vt_new(INT rows, INT columns, VTConfig const* config);
 void vt_free(VT* vt);
 
 // events
@@ -179,7 +186,6 @@ void vt_write(VT* vt, const char* str, size_t str_sz);
 // information
 VTCell      vt_char(VT* vt, INT row, INT column);
 int         vt_translate_key(VT* vt, uint16_t key, bool shift, bool ctrl, char* output, size_t max_sz);
-const char* vt_last_text_received(VT* vt);
 
 #define CURSOR_NOT_VISIBLE -1
 VTCursor vt_cursor(VT* vt);

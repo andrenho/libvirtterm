@@ -1,9 +1,5 @@
-#define _XOPEN_SOURCE 600
-#ifdef __APPLE__
-# include <util.h>
-#else
-# include <pty.h>
-#endif
+#include "../libvirtterm_pty.h"
+
 #include <unistd.h>
 #include <fcntl.h>
 #include <utmp.h>
@@ -26,8 +22,8 @@ static SDL_Renderer*    ren = NULL;
 static SDL_AudioStream* stream = NULL;
 static Uint8*           wav_data = NULL;
 static Uint32           wav_data_len = 0;
-static int              master_pty = -1;
 static VT*              vt;
+static VTPTY*           vtpty;
 static SDL_Texture*     font;
 
 #define FONT_W 8
@@ -98,7 +94,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     int w, h;
     SDL_GetWindowSize(window, &w, &h);
     VTConfig config = VT_DEFAULT_CONFIG;
-    config.debug = VT_DEBUG_ALL_BYTES;
+    config.debug = VT_DEBUG_ERRORS_ONLY;
     config.acs_chars[0x00] = 0x4;   // diamond
     config.acs_chars[0x01] = 0xb0;  // checkerbox
     config.acs_chars[0x06] = 0xf8;  // degree
@@ -124,29 +120,13 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     config.acs_chars[0x1c] = 0xf0;  // not equals
     config.acs_chars[0x1d] = 0x9c;  // pound sterling
     config.acs_chars[0x1e] = 0xfa;  // center dot
-    vt = vt_new((h - BORDER*2) / FONT_H / ZOOM, (w - BORDER*2) / FONT_W / ZOOM, &config, NULL);
+    vt = vt_new((h - BORDER*2) / FONT_H / ZOOM, (w - BORDER*2) / FONT_W / ZOOM, &config);
 
     //
-    // open shell
+    // initialize VTPTY
     //
-    char pty_name[1024];
-    struct winsize ws = { vt_rows(vt), vt_columns(vt), w - (BORDER * 2), h - (BORDER * 2) };
-    pid_t pid = forkpty(&master_pty, pty_name, NULL, &ws);
-    if (pid == 0) {
-        setenv("LC_ALL", "en_US.ISO-8859-1", 1);
-        setenv("TERM", "xterm", 1);
-        char *shell_path = getenv("SHELL");
-        if (shell_path)
-            execl(shell_path, shell_path, NULL);
-        else
-            execl("/bin/sh", "sh", NULL);
-        perror("execl");
-        exit(1);
-    }
-    int flags = fcntl(master_pty, F_GETFL, 0);
-    fcntl(master_pty, F_SETFL, flags | O_NONBLOCK);
-
-    printf("Shell session started at %s.\n", pty_name);
+    vtpty = vtpty_new(vt, INPUT_BUFFER_SIZE);
+    printf("Shell session started at %s.\n", vtpty_name(vtpty));
 
     return SDL_APP_CONTINUE;
 }
@@ -193,17 +173,13 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
         case SDL_EVENT_KEY_DOWN: {
             SDL_Keycode keycode = SDL_GetKeyFromScancode(event->key.scancode, event->key.mod, false);
             uint16_t key = translate_key(keycode);
-            char buf[16];
-            int n = vt_translate_key(vt, key, event->key.mod & SDL_KMOD_SHIFT, event->key.mod & SDL_KMOD_CTRL, buf, sizeof buf);
-            if (buf[0] != 0) {
-#ifdef DEBUG
-                for (int i = 0; i < n; ++i)
-                    printf("< %c    %d 0x%02X\n", buf[i], buf[i], buf[i]);
-                printf("------\n");
-#endif
-                if (write(master_pty, buf, n) == 0)
-                    exit(0);
-            }
+            vtpty_keypress(vtpty, key, event->key.mod & SDL_KMOD_SHIFT, event->key.mod & SDL_KMOD_CTRL);
+            break;
+        }
+        case SDL_EVENT_WINDOW_RESIZED: {
+            int w = event->window.data1;
+            int h = event->window.data2;
+            vtpty_resize(vtpty, (h - BORDER*2) / FONT_H / ZOOM, (w - BORDER*2) / FONT_W / ZOOM);
             break;
         }
         case SDL_EVENT_QUIT:
@@ -261,26 +237,17 @@ SDL_AppResult SDL_AppIterate(void *appstate)
             // play beep
             while (SDL_GetAudioStreamQueued(stream) < (int)wav_data_len)
                 SDL_PutAudioStreamData(stream, wav_data, wav_data_len);
-        } else if (e.type == VT_EVENT_WINDOW_TITLE_UPDATED) {
-            SDL_SetWindowTitle(window, vt_last_text_received(vt));
+        } else if (e.type == VT_EVENT_TEXT_RECEIVED) {
+            if (e.text_received.type == VTT_WINDOW_TITLE_UPDATED)
+                SDL_SetWindowTitle(window, e.text_received.text);
+            free((void *) e.text_received.text);
         }
     }
 
     //
     // process PTY
     //
-    char buf[INPUT_BUFFER_SIZE];
-    int n = read(master_pty, buf, sizeof(buf));
-    if (n == 0) {
-        exit(0);
-    } else if (n > 0) {
-#ifdef DEBUG
-        for (int i = 0; i < n; ++i)
-            printf("> %c    %d 0x%02X\n", buf[i], buf[i], buf[i]);
-        printf("------\n");
-#endif
-        vt_write(vt, buf, n);
-    }
+    vtpty_process(vtpty);
 
     //
     // render screen

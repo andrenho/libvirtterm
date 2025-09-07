@@ -34,6 +34,15 @@ TODO:
             enter_ca_mode=\E[?1049h,
             exit_ca_mode=\E[?1049l,
   - [x] Add DEC chars
+  - [x] Resize support (basic)
+  - [ ] Mouse support
+      - [ ] ncurses
+      - [ ] Others (vim, etc)
+  - [ ] Other functions
+      flash_screen=\E[?5h$<100/>\E[?5l,
+  - [ ] Blinking
+  - [ ] Application not exiting on exit
+    - [ ] separate library for PTY
   - [ ] Make applications work
     - [x] vim
     - [x] top
@@ -42,27 +51,21 @@ TODO:
     - [x] dialog
     - [x] cmatrix
     - [x] ncdu
-    - [ ] mc
+    - [x] mc
       - [x] update window title
-      - [ ] add text to the event (?)
-    - [ ] tmux
+      - [x] add text to the event (?)
+      - [ ] ENTER in help not working
+    - [x] tmux
     - [ ] hollywood
     - [ ] vttest
-  - [ ] Mouse support
-    - [ ] ncurses
-    - [ ] Others (vim, etc)
-  - [ ] Other functions
-      flash_screen=\E[?5h$<100/>\E[?5l,
   - [ ] Reduce CPU usage (use cmatrix as example)
-  - [ ] Blinking
   - [ ] XTerm specific sequences
-  - [ ] Resize support
   - [ ] Functions/escape sequences for advanced xterm stuff
-  - [ ] Application not exiting on exit
   - [ ] Unicode support
   - [ ] Selection support
   - [ ] 256 color support
   - [ ] icons on console (lsd)
+  - [ ] resize while keeping text
   - [ ] refactor example
     - [ ] detect closing terminal
 

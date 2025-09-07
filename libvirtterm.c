@@ -19,29 +19,26 @@
 
 #define ACS_MIN 0x2b
 
-typedef enum VT_ReceivingTest { VTR_NO, VTR_WINDOW_TITLE, VTR_DIRECTORY_HINT } VT_ReceivingText;
-
 typedef struct VT {
     // terminal configuration
     INT        rows;
     INT        columns;
     VTConfig   config;
-    void*      data;
 
     // terminal state
-    VTCell*          matrix;
-    VTCell*          matrix_copy;
-    VTCursor         cursor;
-    VTCursor         cursor_saved;
-    VTAttrib         current_attrib;
-    INT              scroll_area_top;
-    INT              scroll_area_bottom;
-    bool             acs_mode;
-    bool             insert_mode;
-    bool             cursor_app_mode;
-    VT_ReceivingText receiving_text;
-    CHAR             last_char;
-    char*            last_text_received;
+    VTCell*            matrix;
+    VTCell*            matrix_copy;
+    VTCursor           cursor;
+    VTCursor           cursor_saved;
+    VTAttrib           current_attrib;
+    INT                scroll_area_top;
+    INT                scroll_area_bottom;
+    bool               acs_mode;
+    bool               insert_mode;
+    bool               cursor_app_mode;
+    VTTextReceivedType receiving_text;
+    CHAR               last_char;
+    char*              last_text_received;
 
     // escape sequence parsing
     char       esc_buffer[32];
@@ -61,7 +58,7 @@ static void vt_free_event_queue(VT*);
 
 #pragma region Initialization
 
-VT* vt_new(INT rows, INT columns, VTConfig const* config, void* data)
+VT* vt_new(INT rows, INT columns, VTConfig const* config)
 {
     VT* vt = calloc(1, sizeof(VT));
     vt->rows = rows;
@@ -74,14 +71,18 @@ VT* vt_new(INT rows, INT columns, VTConfig const* config, void* data)
     vt->scroll_area_bottom = vt->rows - 1;
     vt->event_queue_start = NULL;
     vt->event_queue_end = NULL;
-    vt->data = data;
     vt->acs_mode = false;
     vt->insert_mode = false;
     vt->cursor_app_mode = false;
-    vt->receiving_text = VTR_NO;
+    vt->receiving_text = VTT_NOT_RECEIVING;
     vt->last_text_received = NULL;
     memset(vt->esc_buffer, 0, sizeof vt->esc_buffer);
-    vt_resize(vt, rows, columns);
+
+    vt->matrix = malloc(rows * columns * sizeof(VTCell));
+    vt->matrix_copy = malloc(rows * columns * sizeof(VTCell));
+    for (INT i = 0; i < rows * columns; ++i)
+        vt->matrix[i] = vt->matrix_copy[i] = (VTCell) { .ch = ' ', .attrib = DEFAULT_ATTR };
+
     return vt;
 }
 
@@ -106,7 +107,7 @@ void vt_reset(VT* vt)
     vt->acs_mode = false;
     vt->insert_mode = false;
     vt->cursor_app_mode = false;
-    vt->receiving_text = VTR_NO;
+    vt->receiving_text = VTT_NOT_RECEIVING;
     free(vt->last_text_received);
     vt->last_text_received = NULL;
     for (int i = 0; i < vt->rows * vt->columns; ++i)
@@ -116,19 +117,39 @@ void vt_reset(VT* vt)
 
 void vt_resize(VT* vt, INT rows, INT columns)
 {
-    vt->rows = rows;
-    vt->columns = columns;
+    if (!vt->matrix)
+        return;
 
+    INT init_row_new = 0, init_row_old = 0;
+    if (rows > vt->rows)
+        init_row_new = rows - vt->rows;
+    else
+        init_row_old = vt->rows - rows;
+
+    VTCell* old_matrix[] = { vt->matrix, vt->matrix_copy };
+    VTCell* new_matrix[2];
+    for (size_t i = 0; i < 2; ++i) {
+        new_matrix[i] = malloc(sizeof(VTCell) * rows * columns);
+        // clear new matrix
+        for (INT j = 0; j < rows * columns; ++j)
+            new_matrix[i][j] = (VTCell) { .ch = ' ', .attrib = DEFAULT_ATTR };
+        /*
+        // copy characters from old to new, taking resize into account
+        for (INT new_row = rows - 1, old_row = vt->rows - 1; new_row >= 0 && old_row >= 0; --old_row, --new_row)
+            for (INT column = 0; column < MIN(columns, vt->columns); ++column)
+                new_matrix[i][new_row * columns + column] = old_matrix[i][old_row * vt->columns + column];
+        */
+    }
+
+    vt->cursor.column = 0;
+    vt->cursor.row = 0;
     free(vt->matrix);
     free(vt->matrix_copy);
+    vt->matrix = new_matrix[0];
+    vt->matrix_copy = new_matrix[1];
 
-    vt->matrix = malloc(sizeof(VTCell) * rows * columns);
-    vt->matrix_copy = malloc(sizeof(VTCell) * rows * columns);
-    for (int i = 0; i < rows * columns; ++i)
-        vt->matrix[i] = (VTCell) { .ch = ' ', .attrib = DEFAULT_ATTR };
-    memcpy(vt->matrix_copy, vt->matrix, vt->columns * vt->rows * sizeof(VTCell));
-
-    // TODO - keep chars when resizing
+    vt->rows = rows;
+    vt->columns = columns;
 }
 
 #pragma endregion
@@ -385,7 +406,7 @@ static void vt_start_escape_seq(VT* vt, char c)
     vt->esc_buffer[0] = c;
 }
 
-static void vt_start_receiving_text(VT* vt, VT_ReceivingText r)
+static void vt_start_receiving_text(VT* vt, VTTextReceivedType r)
 {
     free(vt->last_text_received);
     vt->last_text_received = NULL;
@@ -578,8 +599,8 @@ static bool parse_escape_seq(VT* vt)
 #define N(n) ((n) == 0 ? 1 : (n))
 #define MATCH(pattern) match_escape_seq(vt, vt->esc_buffer, pattern, args, &argn)
 
-    if (strcmp(vt->esc_buffer, "\e]0;") == 0) { vt_start_receiving_text(vt, VTR_WINDOW_TITLE); T }
-    if (strcmp(vt->esc_buffer, "\e]7;") == 0) { vt_start_receiving_text(vt, VTR_DIRECTORY_HINT); T }
+    if (strcmp(vt->esc_buffer, "\e]0;") == 0) { vt_start_receiving_text(vt, VTT_WINDOW_TITLE_UPDATED); T }
+    if (strcmp(vt->esc_buffer, "\e]7;") == 0) { vt_start_receiving_text(vt, VTT_DIRECTORY_HINT_UPDATED); T }
 
     size_t sz = strlen(vt->esc_buffer);
     char last_char = vt->esc_buffer[sz - 1];
@@ -787,11 +808,9 @@ static void vt_add_to_window_title(VT* vt, CHAR c)
     }
 
     if (end) {
-        if (vt->receiving_text == VTR_WINDOW_TITLE)
-            vt_add_event(vt, &(VTEvent) { .type = VT_EVENT_WINDOW_TITLE_UPDATED });
-        if (vt->receiving_text == VTR_DIRECTORY_HINT)
-            vt_add_event(vt, &(VTEvent) { .type = VT_EVENT_DIRECTORY_HINT_UPDATED });
-        vt->receiving_text = VTR_NO;
+        vt_add_event(vt, &(VTEvent) { .type = VT_EVENT_TEXT_RECEIVED, .text_received = {
+            .type = vt->receiving_text, .text = strdup(vt->last_text_received) } });
+        vt->receiving_text = VTT_NOT_RECEIVING;
     }
 }
 
@@ -800,7 +819,7 @@ void vt_write(VT* vt, const char* str, size_t str_sz)
     // parse characters
     for (size_t i = 0; i < str_sz; ++i) {
         CHAR c = str[i];
-        if (vt->receiving_text != VTR_NO)
+        if (vt->receiving_text != VTT_NOT_RECEIVING)
             vt_add_to_window_title(vt, c);
         else if (!vt->esc_buffer[0])   // not parsing escape sequence
             vt_add_char(vt, c);
@@ -860,11 +879,6 @@ VTCursor vt_cursor(VT* vt)
     cursor.row = MIN(MAX(cursor.row, 0), vt->rows - 1);
     cursor.column = MIN(MAX(cursor.column, 0), vt->columns - 1);
     return cursor;
-}
-
-const char* vt_last_text_received(VT* vt)
-{
-    return vt->last_text_received;
 }
 
 #pragma endregion
