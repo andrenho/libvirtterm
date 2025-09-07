@@ -35,14 +35,14 @@ TODO:
             exit_ca_mode=\E[?1049l,
   - [x] Add DEC chars
   - [x] Resize support (basic)
+  - [x] Application not exiting on exit
+      - [x] separate library for PTY
   - [ ] Mouse support
       - [ ] ncurses
       - [ ] Others (vim, etc)
   - [ ] Other functions
       flash_screen=\E[?5h$<100/>\E[?5l,
   - [ ] Blinking
-  - [ ] Application not exiting on exit
-    - [ ] separate library for PTY
   - [ ] Make applications work
     - [x] vim
     - [x] top
