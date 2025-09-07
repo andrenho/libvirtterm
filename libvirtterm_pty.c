@@ -70,15 +70,17 @@ VTPTYStatus vtpty_process(VTPTY* p)
 {
     char buf[p->input_buffer_size];
     int n = read(p->master_pty, buf, sizeof(buf));
-    if (n > 0) {
-        vt_write(p->vt, buf, n);
-        return VTP_CONTINUE;
-    }
 
+    if (n < 0)
+        return VTP_ERROR;
     if (n == 0)
         return VTP_CLOSE;
 
-    return VTP_ERROR;
+    vt_write(p->vt, buf, n);
+    if (n == p->input_buffer_size)
+        vtpty_process(p);     // tail call
+    else
+        return VTP_CONTINUE;
 }
 
 void vtpty_resize(VTPTY* p, int rows, int columns)
