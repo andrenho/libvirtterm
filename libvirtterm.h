@@ -155,6 +155,18 @@ typedef struct VTEvent {
 } VTEvent;
 
 //
+// Mouse
+//
+
+typedef enum VTMouseButton {
+    VTM_LEFT=0, VTM_MIDDLE=1, VTM_RIGHT=2, VTM_RELEASE=3, VTM_SCROLL_UP=64, VTM_SCROLL_DOWN=65,
+} VTMouseButton;
+
+typedef enum VTMouseModifier {
+    VTM_SHIFT=4, VTM_ALT=8, VTM_CTRL=16,
+} VTMouseModifier;
+
+//
 // Terminal
 //
 
@@ -186,6 +198,8 @@ void vt_write(VT* vt, const char* str, size_t str_sz);
 // information
 VTCell      vt_char(VT* vt, INT row, INT column);
 int         vt_translate_key(VT* vt, uint16_t key, bool shift, bool ctrl, char* output, size_t max_sz);
+int         vt_translate_mouse_move(VT* vt, INT row, INT column, char* output, size_t max_sz);
+int         vt_translate_mouse_click(VT* vt, INT row, INT column, VTMouseButton button, VTMouseModifier mod, char* output, size_t max_sz);
 
 #define CURSOR_NOT_VISIBLE -1
 VTCursor vt_cursor(VT* vt);

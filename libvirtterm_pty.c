@@ -5,6 +5,7 @@
 #else
 # include <pty.h>
 #endif
+#include <errno.h>
 #include <fcntl.h>
 #include <signal.h>
 #include <stdio.h>
@@ -52,18 +53,42 @@ void vtpty_close(VTPTY* p)
     free(p);
 }
 
-VTPTYStatus vtpty_keypress(VTPTY* p, uint16_t key, bool shift, bool ctrl)
+VTPTYStatus write_to_vt(VTPTY* p, const char* buf, size_t n)
 {
-    char buf[16];
-    int n = vt_translate_key(p->vt, key, shift, ctrl, buf, sizeof buf);
     if (buf[0] != 0) {
         int r = write(p->master_pty, buf, n);
         if (r == 0)
             return VTP_CLOSE;
-        if (r < 0)
-            return VTP_ERROR;
+        if (r < 0) {
+            switch (errno) {
+                case EAGAIN: return VTP_CONTINUE;
+                case EIO: return VTP_CLOSE;
+                default: return VTP_ERROR;
+            }
+        }
     }
     return VTP_CONTINUE;
+}
+
+VTPTYStatus vtpty_keypress(VTPTY* p, uint16_t key, bool shift, bool ctrl)
+{
+    char buf[16];
+    int n = vt_translate_key(p->vt, key, shift, ctrl, buf, sizeof buf);
+    return write_to_vt(p, buf, n);
+}
+
+VTPTYStatus vtpty_mouse_move(VTPTY* p, INT row, INT column)
+{
+    char buf[24];
+    int n = vt_translate_mouse_move(p->vt, row, column, buf, sizeof buf);
+    return write_to_vt(p, buf, n);
+}
+
+VTPTYStatus vtpty_mouse_click(VTPTY* p, INT row, INT column, VTMouseButton button, VTMouseModifier mod)
+{
+    char buf[24];
+    int n = vt_translate_mouse_click(p->vt, row, column, button, mod, buf, sizeof buf);
+    return write_to_vt(p, buf, n);
 }
 
 VTPTYStatus vtpty_process(VTPTY* p)
@@ -71,14 +96,19 @@ VTPTYStatus vtpty_process(VTPTY* p)
     char buf[p->input_buffer_size];
     int n = read(p->master_pty, buf, sizeof(buf));
 
-    if (n < 0)
-        return VTP_ERROR;
+    if (n < 0) {
+        switch (errno) {
+            case EAGAIN: return VTP_CONTINUE;
+            case EIO: return VTP_CLOSE;
+            default: return VTP_ERROR;
+        }
+    }
     if (n == 0)
         return VTP_CLOSE;
 
     vt_write(p->vt, buf, n);
     if (n == p->input_buffer_size)
-        vtpty_process(p);     // tail call
+        return vtpty_process(p);     // tail call
     else
         return VTP_CONTINUE;
 }

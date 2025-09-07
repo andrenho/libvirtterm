@@ -16,6 +16,9 @@ VTPTYStatus vtpty_process(VTPTY* p);
 
 void        vtpty_resize(VTPTY* p, int rows, int columns);
 
+VTPTYStatus vtpty_mouse_move(VTPTY* p, INT row, INT column);
+VTPTYStatus vtpty_mouse_click(VTPTY* p, INT row, INT column, VTMouseButton button, VTMouseModifier mod);
+
 const char* vtpty_name(VTPTY* p);
 
 #endif //LIBVIRTTERM_PTY_H

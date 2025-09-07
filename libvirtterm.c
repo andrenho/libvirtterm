@@ -19,6 +19,8 @@
 
 #define ACS_MIN 0x2b
 
+typedef enum { VTM_NO, VTM_CLICKS, VTM_DRAG, VTM_ALL } VTMouseTracking;
+
 typedef struct VT {
     // terminal configuration
     INT        rows;
@@ -39,6 +41,8 @@ typedef struct VT {
     VTTextReceivedType receiving_text;
     CHAR               last_char;
     char*              last_text_received;
+    VTMouseTracking    mouse_tracking;
+    bool               sgr_mouse_mode;
 
     // escape sequence parsing
     char       esc_buffer[32];
@@ -76,6 +80,8 @@ VT* vt_new(INT rows, INT columns, VTConfig const* config)
     vt->cursor_app_mode = false;
     vt->receiving_text = VTT_NOT_RECEIVING;
     vt->last_text_received = NULL;
+    vt->mouse_tracking = VTM_NO;
+    vt->sgr_mouse_mode = false;
     memset(vt->esc_buffer, 0, sizeof vt->esc_buffer);
 
     vt->matrix = malloc(rows * columns * sizeof(VTCell));
@@ -110,6 +116,8 @@ void vt_reset(VT* vt)
     vt->receiving_text = VTT_NOT_RECEIVING;
     free(vt->last_text_received);
     vt->last_text_received = NULL;
+    vt->mouse_tracking = VTM_NO;
+    vt->sgr_mouse_mode = false;
     for (int i = 0; i < vt->rows * vt->columns; ++i)
         vt->matrix[i] = (VTCell) { .ch = ' ', .attrib = DEFAULT_ATTR };
     memcpy(vt->matrix_copy, vt->matrix, vt->columns * vt->rows * sizeof(VTCell));
@@ -538,6 +546,18 @@ static void xterm_escape_seq(VT* vt, char mode, INT arg)
             vt->cursor.visible = enable;
             break;
         case 69:  // ignore for now - margins
+            break;
+        case 1000:
+            if (enable) vt->mouse_tracking = VTM_CLICKS; else vt->mouse_tracking = VTM_NO;
+            break;
+        case 1002:
+            if (enable) vt->mouse_tracking = VTM_DRAG; else vt->mouse_tracking = VTM_NO;
+            break;
+        case 1003:
+            if (enable) vt->mouse_tracking = VTM_ALL; else vt->mouse_tracking = VTM_NO;
+            break;
+        case 1006:
+            vt->mouse_tracking = enable;
             break;
         case 1049:  // alternate screen buffer
             if (enable) {
@@ -1044,6 +1064,24 @@ int vt_translate_key(VT* vt, uint16_t key, bool shift, bool ctrl, char* output, 
     }
 
     return 1;
+}
+
+#pragma endregion
+
+//
+// MOUSE TRANSLATION
+//
+
+#pragma region Mouse Translation
+
+int vt_translate_mouse_move(VT* vt, INT row, INT column, char* output, size_t max_sz)
+{
+    return 0;
+}
+
+int vt_translate_mouse_click(VT* vt, INT row, INT column, VTMouseButton button, VTMouseModifier mod, char* output, size_t max_sz)
+{
+    return 0;
 }
 
 #pragma endregion

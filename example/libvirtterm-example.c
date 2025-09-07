@@ -5,6 +5,7 @@
 #include <utmp.h>
 
 #define SDL_MAIN_USE_CALLBACKS 1  /* use the callbacks instead of main() */
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <SDL3/SDL_assert.h>
@@ -28,7 +29,7 @@ static SDL_Texture*     font;
 
 #define FONT_W 8
 #define FONT_H 15
-#define ZOOM 1.f
+#define ZOOM 2.f
 #define BORDER 16
 #define INPUT_BUFFER_SIZE (16*1024)
 
@@ -165,6 +166,20 @@ static uint16_t translate_key(SDL_Keycode key)
 }
 
 
+static SDL_AppResult vtpty_do(VTPTYStatus status)
+{
+    switch (status) {
+        case VTP_CONTINUE:
+            return SDL_APP_CONTINUE;
+        case VTP_CLOSE:
+            return SDL_APP_SUCCESS;
+        case VTP_ERROR:
+            SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "VTPTY Error", strerror(errno), window);
+            return SDL_APP_FAILURE;
+    }
+}
+
+
 SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
 {
     (void) appstate;
@@ -173,13 +188,16 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
         case SDL_EVENT_KEY_DOWN: {
             SDL_Keycode keycode = SDL_GetKeyFromScancode(event->key.scancode, event->key.mod, false);
             uint16_t key = translate_key(keycode);
-            vtpty_keypress(vtpty, key, event->key.mod & SDL_KMOD_SHIFT, event->key.mod & SDL_KMOD_CTRL);
-            break;
+            return vtpty_do(vtpty_keypress(vtpty, key, event->key.mod & SDL_KMOD_SHIFT, event->key.mod & SDL_KMOD_CTRL));
         }
         case SDL_EVENT_WINDOW_RESIZED: {
             int w = event->window.data1;
             int h = event->window.data2;
             vtpty_resize(vtpty, (h - BORDER*2) / FONT_H / ZOOM, (w - BORDER*2) / FONT_W / ZOOM);
+        }
+        case SDL_EVENT_MOUSE_MOTION: {
+            int x = (event->motion.x - BORDER) / FONT_W / ZOOM;
+            int y = (event->motion.y - BORDER) / FONT_H / ZOOM;
             break;
         }
         case SDL_EVENT_QUIT:
@@ -247,7 +265,7 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     //
     // process PTY
     //
-    vtpty_process(vtpty);
+    SDL_AppResult r = vtpty_do(vtpty_process(vtpty));
 
     //
     // render screen
@@ -262,7 +280,7 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     }
 
     SDL_RenderPresent(ren);
-    return SDL_APP_CONTINUE;
+    return r;
 }
 
 
