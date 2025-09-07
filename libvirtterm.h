@@ -199,7 +199,7 @@ void vt_write(VT* vt, const char* str, size_t str_sz);
 VTCell      vt_char(VT* vt, INT row, INT column);
 int         vt_translate_key(VT* vt, uint16_t key, bool shift, bool ctrl, char* output, size_t max_sz);
 int         vt_translate_mouse_move(VT* vt, INT row, INT column, char* output, size_t max_sz);
-int         vt_translate_mouse_click(VT* vt, INT row, INT column, VTMouseButton button, VTMouseModifier mod, char* output, size_t max_sz);
+int         vt_translate_mouse_click(VT* vt, INT row, INT column, VTMouseButton button, bool down, VTMouseModifier mod, char* output, size_t max_sz);
 
 #define CURSOR_NOT_VISIBLE -1
 VTCursor vt_cursor(VT* vt);

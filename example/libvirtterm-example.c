@@ -185,13 +185,11 @@ SDL_AppResult mouse_event(SDL_Event* event)
     VTMouseButton button = VTM_RELEASE;
     VTMouseModifier mod = 0;
 
-    if (event->button.down) {
-        switch (event->button.button) {
-            case SDL_BUTTON_LEFT: button = VTM_LEFT; break;
-            case SDL_BUTTON_MIDDLE: button = VTM_MIDDLE; break;
-            case SDL_BUTTON_RIGHT: button = VTM_RIGHT; break;
-            default: return SDL_APP_CONTINUE;
-        }
+    switch (event->button.button) {
+        case SDL_BUTTON_LEFT: button = VTM_LEFT; break;
+        case SDL_BUTTON_MIDDLE: button = VTM_MIDDLE; break;
+        case SDL_BUTTON_RIGHT: button = VTM_RIGHT; break;
+        default: return SDL_APP_CONTINUE;
     }
 
     SDL_Keymod kmod = SDL_GetModState();
@@ -199,11 +197,11 @@ SDL_AppResult mouse_event(SDL_Event* event)
     if (kmod & SDL_KMOD_ALT) mod |= VTM_ALT;
     if (kmod & SDL_KMOD_CTRL) mod |= VTM_CTRL;
 
-    INT column = (event->motion.x - BORDER) / FONT_W / ZOOM;
-    INT row = (event->motion.y - BORDER) / FONT_H / ZOOM;
+    INT column = (event->button.x - BORDER) / FONT_W / ZOOM;
+    INT row = (event->button.y - BORDER) / FONT_H / ZOOM;
 
     if (column >= 0 && row >= 0 && column < vt_columns(vt) && row < vt_rows(vt))
-        return vtpty_do(vtpty_mouse_click(vtpty, row, column, button, mod));
+        return vtpty_do(vtpty_mouse_click(vtpty, row, column, button, event->button.down, mod));
 
     return SDL_APP_CONTINUE;
 }
@@ -235,6 +233,14 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
         case SDL_EVENT_MOUSE_BUTTON_UP:
         case SDL_EVENT_MOUSE_BUTTON_DOWN:
             return mouse_event(event);
+        case SDL_EVENT_MOUSE_WHEEL: {
+            float x, y; SDL_GetMouseState(&x, &y);
+            INT column = (x - BORDER) / FONT_W / ZOOM;
+            INT row = (y - BORDER) / FONT_H / ZOOM;
+            if (column >= 0 && row >= 0 && column < vt_columns(vt) && row < vt_rows(vt))
+                return vtpty_do(vtpty_mouse_click(vtpty, row, column, event->wheel.integer_y == 1 ? VTM_SCROLL_UP : VTM_SCROLL_DOWN, true, 0));
+            break;
+        }
         case SDL_EVENT_QUIT:
             return SDL_APP_SUCCESS;
     }

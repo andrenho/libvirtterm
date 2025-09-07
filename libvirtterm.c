@@ -43,6 +43,8 @@ typedef struct VT {
     char*              last_text_received;
     VTMouseTracking    mouse_tracking;
     bool               sgr_mouse_mode;
+    VTMouseButton      last_mouse_button;
+    VTMouseModifier    last_mouse_mod;
 
     // escape sequence parsing
     char       esc_buffer[32];
@@ -82,6 +84,8 @@ VT* vt_new(INT rows, INT columns, VTConfig const* config)
     vt->last_text_received = NULL;
     vt->mouse_tracking = VTM_NO;
     vt->sgr_mouse_mode = false;
+    vt->last_mouse_button = VTM_RELEASE;
+    vt->last_mouse_mod = 0;
     memset(vt->esc_buffer, 0, sizeof vt->esc_buffer);
 
     vt->matrix = malloc(rows * columns * sizeof(VTCell));
@@ -118,6 +122,8 @@ void vt_reset(VT* vt)
     vt->last_text_received = NULL;
     vt->mouse_tracking = VTM_NO;
     vt->sgr_mouse_mode = false;
+    vt->last_mouse_button = VTM_RELEASE;
+    vt->last_mouse_mod = 0;
     for (int i = 0; i < vt->rows * vt->columns; ++i)
         vt->matrix[i] = (VTCell) { .ch = ' ', .attrib = DEFAULT_ATTR };
     memcpy(vt->matrix_copy, vt->matrix, vt->columns * vt->rows * sizeof(VTCell));
@@ -128,6 +134,7 @@ void vt_resize(VT* vt, INT rows, INT columns)
     if (!vt->matrix)
         return;
 
+    /*
     INT init_row_new = 0, init_row_old = 0;
     if (rows > vt->rows)
         init_row_new = rows - vt->rows;
@@ -135,6 +142,7 @@ void vt_resize(VT* vt, INT rows, INT columns)
         init_row_old = vt->rows - rows;
 
     VTCell* old_matrix[] = { vt->matrix, vt->matrix_copy };
+    */
     VTCell* new_matrix[2];
     for (size_t i = 0; i < 2; ++i) {
         new_matrix[i] = malloc(sizeof(VTCell) * rows * columns);
@@ -1074,14 +1082,40 @@ int vt_translate_key(VT* vt, uint16_t key, bool shift, bool ctrl, char* output, 
 
 #pragma region Mouse Translation
 
+
+static int generate_mouse_sequence(VT* vt, INT row, INT column, VTMouseButton button, bool down, VTMouseModifier mod, bool is_move, char* output, size_t max_sz)
+{
+    if (vt->sgr_mouse_mode) {
+        // TODO - what about dragging?
+        int m = button + mod + (is_move ? 32 : 0);
+        return snprintf(output, max_sz, "\e<%d;%d;%d%c", m, column + 1, row + 1, down ? 'M' : 'm');
+    } else {
+        if (down)
+            button = VTM_RELEASE;
+        if (is_move)
+            button = vt->last_mouse_button;
+        int m = button + mod + (is_move ? 32 : 0);
+        if (row >= 223 || column >= 223)
+            return 0;
+        return snprintf(output, max_sz, "\e[M%c%c%c", m + 32, column + 33, row + 33);
+    }
+}
+
 int vt_translate_mouse_move(VT* vt, INT row, INT column, char* output, size_t max_sz)
 {
+    if (vt->mouse_tracking == VTM_ALL || (vt->mouse_tracking == VTM_DRAG && vt->last_mouse_button != VTM_RELEASE))
+        return generate_mouse_sequence(vt, row, column, vt->last_mouse_button, false, vt->last_mouse_mod, true, output, max_sz);
     return 0;
 }
 
-int vt_translate_mouse_click(VT* vt, INT row, INT column, VTMouseButton button, VTMouseModifier mod, char* output, size_t max_sz)
+int vt_translate_mouse_click(VT* vt, INT row, INT column, VTMouseButton button, bool down, VTMouseModifier mod, char* output, size_t max_sz)
 {
-    return 0;
+    if (vt->mouse_tracking == VTM_NO)
+        return 0;
+    int r = generate_mouse_sequence(vt, row, column, button, down, mod, false, output, max_sz);
+    vt->last_mouse_button = down ? button : VTM_RELEASE;
+    vt->last_mouse_mod = mod;
+    return r;
 }
 
 #pragma endregion

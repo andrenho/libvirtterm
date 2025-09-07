@@ -84,10 +84,10 @@ VTPTYStatus vtpty_mouse_move(VTPTY* p, INT row, INT column)
     return write_to_vt(p, buf, n);
 }
 
-VTPTYStatus vtpty_mouse_click(VTPTY* p, INT row, INT column, VTMouseButton button, VTMouseModifier mod)
+VTPTYStatus vtpty_mouse_click(VTPTY* p, INT row, INT column, VTMouseButton button, bool down, VTMouseModifier mod)
 {
     char buf[24];
-    int n = vt_translate_mouse_click(p->vt, row, column, button, mod, buf, sizeof buf);
+    int n = vt_translate_mouse_click(p->vt, row, column, button, down, mod, buf, sizeof buf);
     return write_to_vt(p, buf, n);
 }
 
