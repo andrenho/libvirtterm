@@ -55,7 +55,7 @@ void vtpty_close(VTPTY* p)
 
 VTPTYStatus write_to_vt(VTPTY* p, const char* buf, size_t n)
 {
-    if (buf[0] != 0) {
+    if (n > 0 && buf[0] != 0) {
         int r = write(p->master_pty, buf, n);
         if (r == 0)
             return VTP_CLOSE;

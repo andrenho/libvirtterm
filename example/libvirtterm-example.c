@@ -169,14 +169,43 @@ static uint16_t translate_key(SDL_Keycode key)
 static SDL_AppResult vtpty_do(VTPTYStatus status)
 {
     switch (status) {
-        case VTP_CONTINUE:
-            return SDL_APP_CONTINUE;
         case VTP_CLOSE:
             return SDL_APP_SUCCESS;
         case VTP_ERROR:
             SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "VTPTY Error", strerror(errno), window);
             return SDL_APP_FAILURE;
+        default:
     }
+    return SDL_APP_CONTINUE;
+}
+
+
+SDL_AppResult mouse_event(SDL_Event* event)
+{
+    VTMouseButton button = VTM_RELEASE;
+    VTMouseModifier mod = 0;
+
+    if (event->button.down) {
+        switch (event->button.button) {
+            case SDL_BUTTON_LEFT: button = VTM_LEFT; break;
+            case SDL_BUTTON_MIDDLE: button = VTM_MIDDLE; break;
+            case SDL_BUTTON_RIGHT: button = VTM_RIGHT; break;
+            default: return SDL_APP_CONTINUE;
+        }
+    }
+
+    SDL_Keymod kmod = SDL_GetModState();
+    if (kmod & SDL_KMOD_SHIFT) mod |= VTM_SHIFT;
+    if (kmod & SDL_KMOD_ALT) mod |= VTM_ALT;
+    if (kmod & SDL_KMOD_CTRL) mod |= VTM_CTRL;
+
+    INT column = (event->motion.x - BORDER) / FONT_W / ZOOM;
+    INT row = (event->motion.y - BORDER) / FONT_H / ZOOM;
+
+    if (column >= 0 && row >= 0 && column < vt_columns(vt) && row < vt_rows(vt))
+        return vtpty_do(vtpty_mouse_click(vtpty, row, column, button, mod));
+
+    return SDL_APP_CONTINUE;
 }
 
 
@@ -194,12 +223,18 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
             int w = event->window.data1;
             int h = event->window.data2;
             vtpty_resize(vtpty, (h - BORDER*2) / FONT_H / ZOOM, (w - BORDER*2) / FONT_W / ZOOM);
-        }
-        case SDL_EVENT_MOUSE_MOTION: {
-            int x = (event->motion.x - BORDER) / FONT_W / ZOOM;
-            int y = (event->motion.y - BORDER) / FONT_H / ZOOM;
             break;
         }
+        case SDL_EVENT_MOUSE_MOTION: {
+            INT column = (event->motion.x - BORDER) / FONT_W / ZOOM;
+            INT row = (event->motion.y - BORDER) / FONT_H / ZOOM;
+            if (column >= 0 && row >= 0 && column < vt_columns(vt) && row < vt_rows(vt))
+                return vtpty_do(vtpty_mouse_move(vtpty, row, column));
+            break;
+        }
+        case SDL_EVENT_MOUSE_BUTTON_UP:
+        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+            return mouse_event(event);
         case SDL_EVENT_QUIT:
             return SDL_APP_SUCCESS;
     }
