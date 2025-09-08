@@ -503,7 +503,8 @@ static void update_current_attrib(VT* vt, int arg)
             break;
         case 23: vt->current_attrib.italic = false; break;
         case 24: vt->current_attrib.underline = false; break;
-        case 25: vt->current_attrib.blink = false; break;
+        case 25:
+        case 26: vt->current_attrib.blink = false; break;
         case 27: vt->current_attrib.reverse = false; break;
         case 28: vt->current_attrib.invisible = false; break;
         case 30: vt->current_attrib.fg_color = VT_BLACK; break;
@@ -727,7 +728,10 @@ static bool parse_escape_seq(VT* vt)
         T
     }
 
-    if (MATCH("\e[%%m")) {
+    if (MATCH("\e[%%%%m")) {
+        for (int i = 0; i < argn; ++i)
+            if (args[i] == 38 || args[i] == 48)
+                T
         for (int i = 0; i < argn; ++i)
             if (i == 0 || (i > 0 && args[i] != 0))
                 update_current_attrib(vt, args[i]);
