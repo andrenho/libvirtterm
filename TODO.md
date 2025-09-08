@@ -58,7 +58,11 @@ TODO:
     - [x] tmux
     - [ ] hollywood
     - [ ] vttest
+  - [ ] Bug - backspace on shell
   - [ ] Reduce CPU usage (use cmatrix as example)
+  - [ ] Reorganize things
+
+Version 2:
   - [ ] XTerm specific sequences
   - [ ] Functions/escape sequences for advanced xterm stuff
   - [ ] Unicode support
@@ -67,7 +71,6 @@ TODO:
   - [ ] icons on console (lsd)
   - [ ] resize while keeping text
   - [ ] refactor example
-    - [ ] detect closing terminal
 
 Maybe someday implement:
     memory_lock=\El,

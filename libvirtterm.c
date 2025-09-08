@@ -45,6 +45,8 @@ typedef struct VT {
     bool               sgr_mouse_mode;
     VTMouseButton      last_mouse_button;
     VTMouseModifier    last_mouse_mod;
+    INT                last_mouse_row;
+    INT                last_mouse_column;
 
     // escape sequence parsing
     char       esc_buffer[32];
@@ -86,6 +88,8 @@ VT* vt_new(INT rows, INT columns, VTConfig const* config)
     vt->sgr_mouse_mode = false;
     vt->last_mouse_button = VTM_RELEASE;
     vt->last_mouse_mod = 0;
+    vt->last_mouse_row = 0;
+    vt->last_mouse_column = 0;
     memset(vt->esc_buffer, 0, sizeof vt->esc_buffer);
 
     vt->matrix = malloc(rows * columns * sizeof(VTCell));
@@ -124,6 +128,8 @@ void vt_reset(VT* vt)
     vt->sgr_mouse_mode = false;
     vt->last_mouse_button = VTM_RELEASE;
     vt->last_mouse_mod = 0;
+    vt->last_mouse_row = 0;
+    vt->last_mouse_column = 0;
     for (int i = 0; i < vt->rows * vt->columns; ++i)
         vt->matrix[i] = (VTCell) { .ch = ' ', .attrib = DEFAULT_ATTR };
     memcpy(vt->matrix_copy, vt->matrix, vt->columns * vt->rows * sizeof(VTCell));
@@ -1103,8 +1109,16 @@ static int generate_mouse_sequence(VT* vt, INT row, INT column, VTMouseButton bu
 
 int vt_translate_mouse_move(VT* vt, INT row, INT column, char* output, size_t max_sz)
 {
-    if (vt->mouse_tracking == VTM_ALL || (vt->mouse_tracking == VTM_DRAG && vt->last_mouse_button != VTM_RELEASE))
+    bool same_pos = false;
+    if (row == vt->last_mouse_row && column == vt->last_mouse_column)
+        same_pos = true;
+
+    vt->last_mouse_row = row;
+    vt->last_mouse_column = column;
+
+    if (!same_pos && (vt->mouse_tracking == VTM_ALL || (vt->mouse_tracking == VTM_DRAG && vt->last_mouse_button != VTM_RELEASE)))
         return generate_mouse_sequence(vt, row, column, vt->last_mouse_button, false, vt->last_mouse_mod, true, output, max_sz);
+
     return 0;
 }
 
