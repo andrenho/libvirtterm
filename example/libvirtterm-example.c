@@ -95,6 +95,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     int w, h;
     SDL_GetWindowSize(window, &w, &h);
     VTConfig config = VT_DEFAULT_CONFIG;
+    config.blink_cursor = true;
     config.debug = VT_DEBUG_ERRORS_ONLY;
     config.acs_chars[0x00] = 0x4;   // diamond
     config.acs_chars[0x01] = 0xb0;  // checkerbox

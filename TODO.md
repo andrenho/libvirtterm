@@ -40,9 +40,9 @@ TODO:
   - [x] Mouse support
       - [x] ncurses
       - [x] Others (vim, etc)
+  - [ ] Blinking
   - [ ] Other functions
       flash_screen=\E[?5h$<100/>\E[?5l,
-  - [ ] Blinking
   - [ ] Make applications work
     - [x] vim
     - [x] top

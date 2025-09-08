@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <time.h>
 
 #pragma region MIN/MAX
 #define MIN(a,b) \
@@ -23,9 +24,9 @@ typedef enum { VTM_NO, VTM_CLICKS, VTM_DRAG, VTM_ALL } VTMouseTracking;
 
 typedef struct VT {
     // terminal configuration
-    INT        rows;
-    INT        columns;
-    VTConfig   config;
+    INT                rows;
+    INT                columns;
+    VTConfig           config;
 
     // terminal state
     VTCell*            matrix;
@@ -41,16 +42,24 @@ typedef struct VT {
     VTTextReceivedType receiving_text;
     CHAR               last_char;
     char*              last_text_received;
+
+    // mouse
     VTMouseTracking    mouse_tracking;
     bool               sgr_mouse_mode;
     VTMouseState       last_mouse_state;
 
+    // timed operations
+    bool               blink_on;
+    bool               cursor_blink_on;
+    clock_t            last_blink;
+    clock_t            last_cursor_blink;
+
     // escape sequence parsing
-    char       esc_buffer[32];
+    char               esc_buffer[32];
 
     // events
-    VTEvent*   event_queue_start;
-    VTEvent*   event_queue_end;
+    VTEvent*           event_queue_start;
+    VTEvent*           event_queue_end;
 } VT;
 
 static void vt_add_char(VT* vt, CHAR c);
@@ -84,6 +93,10 @@ VT* vt_new(INT rows, INT columns, VTConfig const* config)
     vt->mouse_tracking = VTM_NO;
     vt->sgr_mouse_mode = false;
     vt->last_mouse_state = (VTMouseState) { .column = -1, .row = -1, .button = {0,0,0,0,0}, .mod = 0 };
+    vt->blink_on = false;
+    vt->cursor_blink_on = false;
+    vt->last_blink = 0;
+    vt->last_cursor_blink = 0;
     memset(vt->esc_buffer, 0, sizeof vt->esc_buffer);
 
     vt->matrix = malloc(rows * columns * sizeof(VTCell));
@@ -738,7 +751,26 @@ static void vt_add_escape_char(VT* vt, char c)
 
 static void vt_timed_operations(VT* vt)
 {
+    clock_t now = clock();
 
+    size_t diff_blink = ((double) (now - vt->last_blink)) * 1000.0 / CLOCKS_PER_SEC;
+    size_t diff_cursor_blink = ((double) (now - vt->last_cursor_blink)) * 1000.0 / CLOCKS_PER_SEC;
+
+    if (diff_blink > vt->config.blink_ms) {
+        vt->blink_on = !vt->blink_on;
+        vt->last_blink = now;
+    }
+
+    if (diff_cursor_blink > vt->config.blink_ms) {
+        vt->cursor_blink_on = !vt->cursor_blink_on;
+        vt->last_cursor_blink = now;
+    }
+}
+
+static void vt_reset_cursor_blink(VT* vt)
+{
+    vt->cursor_blink_on = true;
+    vt->last_cursor_blink = clock();
 }
 
 #pragma endregion
@@ -770,6 +802,8 @@ static void vt_add_regular_char(VT* vt, CHAR c)
         .cells = { .row_start = vt->cursor.row, .row_end = vt->cursor.row, .column_start = vt->cursor.column, .column_end = vt->cursor.column }
     });
     vt_cursor_advance(vt, 0, 1);
+
+    vt_reset_cursor_blink(vt);
 }
 
 static void vt_add_char(VT* vt, CHAR c)
@@ -886,8 +920,12 @@ VTCell vt_char(VT* vt, INT row, INT column)
 
     VTCell ch = vt->matrix[row * vt->columns + column];
 
-    if (vt->cursor.visible && vt->cursor.row == row && vt->config.automatic_cursor &&
-            (vt->cursor.column == column || (column == vt->columns - 1 && vt->cursor.column == vt->columns))) {
+    bool is_cursor = vt->cursor.visible
+                && vt->cursor.row == row
+                && vt->config.automatic_cursor
+                && (vt->cursor.column == column || (column == vt->columns - 1 && vt->cursor.column == vt->columns))
+                && (!vt->config.blink_cursor || vt->cursor_blink_on);
+    if (is_cursor) {
         ch.attrib.bg_color = vt->cursor.blinking ? vt->config.blinking_cursor_color : vt->config.cursor_color;
         ch.attrib.fg_color = vt->config.cursor_char_color;
     }

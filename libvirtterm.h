@@ -78,20 +78,24 @@ typedef struct VTConfig {
     VTColor          cursor_char_color;
     bool             automatic_cursor;       // if true, control cursor from within libvirtterm, else sends cursor updates as events
     bool             bold_is_bright;         // true = bold is also bright color
+    bool             blink_cursor;
+    uint16_t         blink_ms;
     CHAR             acs_chars[32];          // see https://en.wikipedia.org/wiki/DEC_Special_Graphics (0x60 ~ 0x7e)
     VTDebug          debug;
 } VTConfig;
 
-#define VT_DEFAULT_CONFIG (VTConfig) {      \
-    .default_bg_color = VT_BLACK,           \
-    .default_fg_color = VT_WHITE,           \
-    .cursor_color = VT_BRIGHT_GREEN,        \
-    .blinking_cursor_color = VT_BRIGHT_YELLOW, \
-    .cursor_char_color = VT_BLACK,          \
-    .automatic_cursor = true,               \
-    .bold_is_bright = true,                 \
+#define VT_DEFAULT_CONFIG (VTConfig) {              \
+    .default_bg_color = VT_BLACK,                   \
+    .default_fg_color = VT_WHITE,                   \
+    .cursor_color = VT_BRIGHT_GREEN,                \
+    .blinking_cursor_color = VT_BRIGHT_YELLOW,      \
+    .cursor_char_color = VT_BLACK,                  \
+    .automatic_cursor = true,                       \
+    .bold_is_bright = true,                         \
+    .blink_cursor = false,                          \
+    .blink_ms = 600,                                \
     .acs_chars = "+#????o#??+++++~---_++++|<>*!fo", \
-    .debug = VT_DEBUG_ERRORS_ONLY,          \
+    .debug = VT_DEBUG_ERRORS_ONLY,                  \
 }
 
 //
