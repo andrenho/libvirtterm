@@ -55,8 +55,8 @@ TODO:
       - [x] ENTER in help not working
     - [x] tmux
   - [x] Bug - backspace on shell
+  - [x] Reduce CPU usage (use cmatrix as example)
   - [ ] Test with event update
-  - [ ] Reduce CPU usage (use cmatrix as example)
   - [ ] Reorganize things
 
 Version 2:

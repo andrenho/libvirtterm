@@ -64,6 +64,7 @@ typedef struct VT {
 
 static void vt_add_char(VT* vt, CHAR c);
 static void vt_add_event(VT* vt, VTEvent* event);
+static void vt_add_event_update_whole_screen(VT* vt);
 static void vt_free_event_queue(VT*);
 
 
@@ -105,6 +106,8 @@ VT* vt_new(INT rows, INT columns, VTConfig const* config)
     for (INT i = 0; i < rows * columns; ++i)
         vt->matrix[i] = vt->matrix_copy[i] = (VTCell) { .ch = ' ', .attrib = DEFAULT_ATTR };
 
+    vt_add_event_update_whole_screen(vt);
+
     return vt;
 }
 
@@ -138,6 +141,7 @@ void vt_reset(VT* vt)
     for (int i = 0; i < vt->rows * vt->columns; ++i)
         vt->matrix[i] = (VTCell) { .ch = ' ', .attrib = DEFAULT_ATTR };
     memcpy(vt->matrix_copy, vt->matrix, vt->columns * vt->rows * sizeof(VTCell));
+    vt_add_event_update_whole_screen(vt);
 }
 
 void vt_resize(VT* vt, INT rows, INT columns)
@@ -177,6 +181,8 @@ void vt_resize(VT* vt, INT rows, INT columns)
 
     vt->rows = rows;
     vt->columns = columns;
+
+    vt_add_event_update_whole_screen(vt);
 }
 
 #pragma endregion
@@ -274,6 +280,13 @@ static void vt_free_event_queue(VT* vt)
 static void vt_beep(VT* vt)
 {
     vt_add_event(vt, &(VTEvent) { .type = VT_EVENT_BELL });
+}
+
+static void vt_add_event_update_whole_screen(VT* vt)
+{
+    vt_add_event(vt, &(VTEvent) { .type = VT_EVENT_CELLS_UPDATED, .cells = {
+        .column_start = 0, .row_start = 0, .column_end = vt->columns - 1, .row_end = vt->rows - 1,
+    }});
 }
 
 #pragma endregion

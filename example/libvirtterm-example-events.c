@@ -26,6 +26,12 @@ static Uint32           wav_data_len = 0;
 static VT*              vt;
 static VTPTY*           vtpty;
 static SDL_Texture*     font;
+static VTCell           cells[500][500];
+
+#define MY_DEFAULT_ATTR ((VTAttrib) { \
+    .bold = false, .dim = false, .underline = false, .blink = false, .reverse = false, .invisible = false, .italic = false, \
+    .bg_color = VT_BLACK, .fg_color = VT_WHITE \
+})
 
 #define FONT_W 8
 #define FONT_H 15
@@ -88,6 +94,13 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     }
 
     SDL_ResumeAudioStreamDevice(stream);
+
+    //
+    // initialize cell cache
+    //
+    for (size_t i = 0; i < 500; ++i)
+        for (size_t j = 0; j < 500; ++j)
+            cells[i][j] = (VTCell) { .ch = 'x', .attrib = MY_DEFAULT_ATTR };
 
     //
     // initialize libvirtterm
@@ -238,7 +251,7 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
 
 static void draw_char(size_t row, size_t column)
 {
-    VTCell chr = vt_char(vt, row, column);
+    VTCell chr = cells[row][column];
     SDL_FRect origin = { chr.ch % 32 * FONT_W, chr.ch / 32 * FONT_H, FONT_W, FONT_H };
     SDL_FRect dest = { column * FONT_W * ZOOM + BORDER, row * FONT_H * ZOOM + BORDER, FONT_W * ZOOM, FONT_H * ZOOM };
 
@@ -287,6 +300,10 @@ SDL_AppResult SDL_AppIterate(void *appstate)
             if (e.text_received.type == VTT_WINDOW_TITLE_UPDATED)
                 SDL_SetWindowTitle(window, e.text_received.text);
             free((void *) e.text_received.text);
+        } else if (e.type == VT_EVENT_CELLS_UPDATED) {
+            for (INT row = e.cells.row_start; row <= e.cells.row_end; ++row)
+                for (INT column = e.cells.column_start; column <= e.cells.column_end; ++column)
+                    cells[row][column] = vt_char(vt, row, column);
         }
     }
 
