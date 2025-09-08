@@ -57,7 +57,7 @@ TODO:
   - [x] Bug - backspace on shell
   - [x] Reduce CPU usage (use cmatrix as example)
   - [x] Test with event update
-  - [ ] Reorganize things
+  - [x] Reorganize things
 
 Version 2:
   - [ ] Other functions
