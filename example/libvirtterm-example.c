@@ -292,7 +292,7 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     //
     // process PTY
     //
-    SDL_AppResult r = vtpty_do(vtpty_process(vtpty));
+    SDL_AppResult r = vtpty_do(vtpty_step(vtpty));
 
     //
     // render screen

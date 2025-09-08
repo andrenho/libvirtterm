@@ -12,7 +12,7 @@ VTPTY*      vtpty_new(VT* vt, size_t input_buffer_size);
 void        vtpty_close(VTPTY* p);
 
 VTPTYStatus vtpty_keypress(VTPTY* p, uint16_t key, bool shift, bool ctrl);
-VTPTYStatus vtpty_process(VTPTY* p);
+VTPTYStatus vtpty_step(VTPTY* p);
 
 void        vtpty_resize(VTPTY* p, int rows, int columns);
 

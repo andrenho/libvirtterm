@@ -706,7 +706,7 @@ static void cancel_escape_seq(VT* vt)
         fprintf(stderr, "Invalid escape sequence: (ESC)%s\n", &copy_buf[1]);
     vt_beep(vt);
     end_escape_seq(vt);
-    vt_write(vt, &copy_buf[1], strlen(copy_buf) - 1);
+    vt_step(vt, &copy_buf[1], strlen(copy_buf) - 1);
 }
 
 static void vt_add_escape_char(VT* vt, char c)
@@ -726,6 +726,19 @@ static void vt_add_escape_char(VT* vt, char c)
             fprintf(stderr, "Escape sequence not recognized: (ESC)%s\n", &vt->esc_buffer[1]);
         end_escape_seq(vt);
     }
+}
+
+#pragma endregion
+
+//
+// TIMED OPERATIONS
+//
+
+#pragma region Timed Operations
+
+static void vt_timed_operations(VT* vt)
+{
+
 }
 
 #pragma endregion
@@ -839,8 +852,11 @@ static void vt_add_to_window_title(VT* vt, CHAR c)
     }
 }
 
-void vt_write(VT* vt, const char* str, size_t str_sz)
+void vt_step(VT* vt, const char* str, size_t str_sz)
 {
+    // timing
+    vt_timed_operations(vt);
+
     // parse characters
     for (size_t i = 0; i < str_sz; ++i) {
         CHAR c = str[i];

@@ -86,14 +86,14 @@ VTPTYStatus vtpty_update_mouse_state(VTPTY* p, VTMouseState state)
     return write_to_vt(p, buf, n);
 }
 
-VTPTYStatus vtpty_process(VTPTY* p)
+VTPTYStatus vtpty_step(VTPTY* p)
 {
     char buf[p->input_buffer_size];
     int n = read(p->master_pty, buf, sizeof(buf));
 
     if (n < 0) {
         switch (errno) {
-            case EAGAIN: return VTP_CONTINUE;
+            case EAGAIN: n = 0; goto skip;
             case EIO: return VTP_CLOSE;
             default: return VTP_ERROR;
         }
@@ -101,9 +101,10 @@ VTPTYStatus vtpty_process(VTPTY* p)
     if (n == 0)
         return VTP_CLOSE;
 
-    vt_write(p->vt, buf, n);
+skip:
+    vt_step(p->vt, buf, n);
     if (n == p->input_buffer_size)
-        return vtpty_process(p);     // tail call
+        return vtpty_step(p);     // tail call
     else
         return VTP_CONTINUE;
 }

@@ -198,9 +198,9 @@ void vt_free(VT* vt);
 bool vt_next_event(VT* vt, VTEvent* e);
 
 // operations
+void vt_step(VT* vt, const char* new_text, size_t new_text_sz);
 void vt_reset(VT* vt);
 void vt_resize(VT* vt, INT rows, INT columns);
-void vt_write(VT* vt, const char* str, size_t str_sz);
 
 // information
 VTCell vt_char(VT* vt, INT row, INT column);
