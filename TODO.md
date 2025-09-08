@@ -40,7 +40,7 @@ TODO:
   - [x] Mouse support
       - [x] ncurses
       - [x] Others (vim, etc)
-  - [ ] Blinking
+  - [x] Blinking
   - [ ] Other functions
       flash_screen=\E[?5h$<100/>\E[?5l,
   - [ ] Make applications work
@@ -58,6 +58,7 @@ TODO:
     - [x] tmux
     - [ ] hollywood
     - [ ] vttest
+  - [ ] Test with event update
   - [ ] Bug - backspace on shell
   - [ ] Reduce CPU usage (use cmatrix as example)
   - [ ] Reorganize things

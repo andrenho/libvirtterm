@@ -26,9 +26,8 @@ VTPTY* vtpty_new(VT* vt, size_t input_buffer_size)
     p->input_buffer_size = input_buffer_size;
     p->vt = vt;
 
-    char pty_name[1024];
     struct winsize ws = { vt_rows(vt), vt_columns(vt), 0, 0 };
-    pid_t pid = forkpty(&p->master_pty, pty_name, NULL, &ws);
+    pid_t pid = forkpty(&p->master_pty, p->pty_name, NULL, &ws);
     if (pid == 0) {
         setenv("LC_ALL", "en_US.ISO-8859-1", 1);
         setenv("TERM", "xterm", 1);
@@ -102,7 +101,7 @@ VTPTYStatus vtpty_step(VTPTY* p)
         return VTP_CLOSE;
 
 skip:
-    vt_step(p->vt, buf, n);
+    vt_write(p->vt, buf, n);
     if (n == p->input_buffer_size)
         return vtpty_step(p);     // tail call
     else

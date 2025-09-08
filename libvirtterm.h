@@ -93,9 +93,9 @@ typedef struct VTConfig {
     .automatic_cursor = true,                       \
     .bold_is_bright = true,                         \
     .blink_cursor = false,                          \
-    .blink_ms = 600,                                \
+    .blink_ms = 700,                                \
     .acs_chars = "+#????o#??+++++~---_++++|<>*!fo", \
-    .debug = VT_DEBUG_ERRORS_ONLY,                  \
+    .debug = VT_NO_DEBUG,                           \
 }
 
 //
@@ -110,14 +110,13 @@ typedef struct __attribute__((packed)) VTAttrib {
     bool reverse     : 1;   //       "          "
     bool invisible   : 1;
     bool italic      : 1;
-    bool dirty       : 1;
     // TODO - add charset
     VTColor bg_color : 4;
     VTColor fg_color : 4;
 } VTAttrib;
 
 #define DEFAULT_ATTR ((VTAttrib) { \
-    .bold = false, .dim = false, .underline = false, .blink = false, .reverse = false, .invisible = false, .italic = false, .dirty = false,\
+    .bold = false, .dim = false, .underline = false, .blink = false, .reverse = false, .invisible = false, .italic = false, \
     .bg_color = vt->config.default_bg_color, .fg_color = vt->config.default_fg_color \
 })
 
@@ -202,7 +201,7 @@ void vt_free(VT* vt);
 bool vt_next_event(VT* vt, VTEvent* e);
 
 // operations
-void vt_step(VT* vt, const char* new_text, size_t new_text_sz);
+void vt_write(VT* vt, const char* new_text, size_t new_text_sz);
 void vt_reset(VT* vt);
 void vt_resize(VT* vt, INT rows, INT columns);
 

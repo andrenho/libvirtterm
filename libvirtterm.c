@@ -181,6 +181,38 @@ void vt_resize(VT* vt, INT rows, INT columns)
 #pragma endregion
 
 //
+// TIMED OPERATIONS
+//
+
+#pragma region Timed Operations
+
+static void vt_timed_operations(VT* vt)
+{
+    clock_t now = clock();
+
+    size_t diff_blink = ((double) (now - vt->last_blink)) * 1000.0 / CLOCKS_PER_SEC;
+    size_t diff_cursor_blink = ((double) (now - vt->last_cursor_blink)) * 1000.0 / CLOCKS_PER_SEC;
+
+    if (diff_blink > vt->config.blink_ms) {
+        vt->blink_on = !vt->blink_on;
+        vt->last_blink = now;
+    }
+
+    if (diff_cursor_blink > vt->config.blink_ms) {
+        vt->cursor_blink_on = !vt->cursor_blink_on;
+        vt->last_cursor_blink = now;
+    }
+}
+
+static void vt_reset_cursor_blink(VT* vt)
+{
+    vt->cursor_blink_on = true;
+    vt->last_cursor_blink = clock();
+}
+
+#pragma endregion
+
+//
 // EVENTS
 //
 
@@ -201,6 +233,8 @@ static void vt_add_event(VT* vt, VTEvent* event)
 
 bool vt_next_event(VT* vt, VTEvent* e)
 {
+    vt_timed_operations(vt);
+
     if (vt->event_queue_start == NULL)
         return false;
 
@@ -693,7 +727,7 @@ static bool parse_escape_seq(VT* vt)
         T
     }
 
-    if (MATCH("\e[%%%m")) {
+    if (MATCH("\e[%%m")) {
         for (int i = 0; i < argn; ++i)
             if (i == 0 || (i > 0 && args[i] != 0))
                 update_current_attrib(vt, args[i]);
@@ -719,7 +753,7 @@ static void cancel_escape_seq(VT* vt)
         fprintf(stderr, "Invalid escape sequence: (ESC)%s\n", &copy_buf[1]);
     vt_beep(vt);
     end_escape_seq(vt);
-    vt_step(vt, &copy_buf[1], strlen(copy_buf) - 1);
+    vt_write(vt, &copy_buf[1], strlen(copy_buf) - 1);
 }
 
 static void vt_add_escape_char(VT* vt, char c)
@@ -739,38 +773,6 @@ static void vt_add_escape_char(VT* vt, char c)
             fprintf(stderr, "Escape sequence not recognized: (ESC)%s\n", &vt->esc_buffer[1]);
         end_escape_seq(vt);
     }
-}
-
-#pragma endregion
-
-//
-// TIMED OPERATIONS
-//
-
-#pragma region Timed Operations
-
-static void vt_timed_operations(VT* vt)
-{
-    clock_t now = clock();
-
-    size_t diff_blink = ((double) (now - vt->last_blink)) * 1000.0 / CLOCKS_PER_SEC;
-    size_t diff_cursor_blink = ((double) (now - vt->last_cursor_blink)) * 1000.0 / CLOCKS_PER_SEC;
-
-    if (diff_blink > vt->config.blink_ms) {
-        vt->blink_on = !vt->blink_on;
-        vt->last_blink = now;
-    }
-
-    if (diff_cursor_blink > vt->config.blink_ms) {
-        vt->cursor_blink_on = !vt->cursor_blink_on;
-        vt->last_cursor_blink = now;
-    }
-}
-
-static void vt_reset_cursor_blink(VT* vt)
-{
-    vt->cursor_blink_on = true;
-    vt->last_cursor_blink = clock();
 }
 
 #pragma endregion
@@ -886,11 +888,8 @@ static void vt_add_to_window_title(VT* vt, CHAR c)
     }
 }
 
-void vt_step(VT* vt, const char* str, size_t str_sz)
+void vt_write(VT* vt, const char* str, size_t str_sz)
 {
-    // timing
-    vt_timed_operations(vt);
-
     // parse characters
     for (size_t i = 0; i < str_sz; ++i) {
         CHAR c = str[i];
@@ -938,6 +937,9 @@ VTCell vt_char(VT* vt, INT row, INT column)
         ch.attrib.fg_color = ch.attrib.bg_color;
         ch.attrib.bg_color = swp;
     }
+
+    if (ch.attrib.blink && vt->blink_on)
+        ch.attrib.fg_color = ch.attrib.bg_color;
 
     return ch;
 }
