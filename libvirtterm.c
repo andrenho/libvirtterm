@@ -999,6 +999,7 @@ static const InputKey vt_strings[] = {
     { VT_F10,         "\e[21~" },
     { VT_F11,         "\e[23~" },
     { VT_F12,         "\e[24~" },
+    { VT_DELETE,      "\e[3~" },
 };
 
 static const InputKey vt_strings_ctrl[] = {
@@ -1025,6 +1026,7 @@ static const InputKey vt_strings_ctrl[] = {
     { VT_F10,         "\e[21;5~" },
     { VT_F11,         "\e[23;5~" },
     { VT_F12,         "\e[24;5~" },
+    { VT_DELETE,      "\e[3;5~" },
 };
 
 static const InputKey vt_strings_shift[] = {
@@ -1051,6 +1053,7 @@ static const InputKey vt_strings_shift[] = {
     { VT_F10,         "\e[21;2~" },
     { VT_F11,         "\e[23;2~" },
     { VT_F12,         "\e[24;2~" },
+    { VT_DELETE,      "\e[3;2~" },
 };
 
 
@@ -1078,6 +1081,7 @@ static const InputKey vt_strings_ctrl_shift[] = {
     { VT_F10,         "\e[21;6~" },
     { VT_F11,         "\e[23;6~" },
     { VT_F12,         "\e[24;6~" },
+    { VT_DELETE,      "\e[3;6~" },
 };
 
 

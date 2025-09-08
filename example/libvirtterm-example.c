@@ -96,7 +96,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     SDL_GetWindowSize(window, &w, &h);
     VTConfig config = VT_DEFAULT_CONFIG;
     config.blink_cursor = true;
-    config.debug = VT_DEBUG_ERRORS_ONLY;
+    config.debug = VT_DEBUG_ALL_BYTES; // VT_DEBUG_ERRORS_ONLY;
     config.acs_chars[0x00] = 0x4;   // diamond
     config.acs_chars[0x01] = 0xb0;  // checkerbox
     config.acs_chars[0x06] = 0xf8;  // degree
@@ -160,6 +160,7 @@ static uint16_t translate_key(SDL_Keycode key)
         case SDLK_UP:                     return VT_ARROW_UP;
         case SDLK_BACKSPACE:              return VT_BACKSPACE;
         case SDLK_TAB:                    return VT_TAB;
+        case SDLK_DELETE:                 return VT_DELETE;
         case SDLK_KP_ENTER:               return '\r';
         default:
             return key < 0xff ? key : 0;

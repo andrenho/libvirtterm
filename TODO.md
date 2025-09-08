@@ -41,9 +41,7 @@ TODO:
       - [x] ncurses
       - [x] Others (vim, etc)
   - [x] Blinking
-  - [ ] Other functions
-      flash_screen=\E[?5h$<100/>\E[?5l,
-  - [ ] Make applications work
+  - [x] Make applications work
     - [x] vim
     - [x] top
     - [x] curses
@@ -54,17 +52,20 @@ TODO:
     - [x] mc
       - [x] update window title
       - [x] add text to the event (?)
-      - [ ] ENTER in help not working
+      - [x] ENTER in help not working
     - [x] tmux
-    - [ ] hollywood
-    - [ ] vttest
+  - [x] Bug - backspace on shell
   - [ ] Test with event update
-  - [ ] Bug - backspace on shell
   - [ ] Reduce CPU usage (use cmatrix as example)
   - [ ] Reorganize things
 
 Version 2:
+  - [ ] Other functions
+    flash_screen=\E[?5h$<100/>\E[?5l,
+  - [ ] Better state machine for parsing keys
   - [ ] XTerm specific sequences
+  - [ ] Full vttest support
+  - [ ] Support ALT key
   - [ ] Functions/escape sequences for advanced xterm stuff
   - [ ] Unicode support
   - [ ] Selection support
