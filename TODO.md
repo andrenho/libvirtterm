@@ -56,7 +56,7 @@ TODO:
     - [x] tmux
   - [x] Bug - backspace on shell
   - [x] Reduce CPU usage (use cmatrix as example)
-  - [ ] Test with event update
+  - [x] Test with event update
   - [ ] Reorganize things
 
 Version 2:
