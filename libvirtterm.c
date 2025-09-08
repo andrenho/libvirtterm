@@ -1091,6 +1091,10 @@ int vt_translate_updated_mouse_state(VT* vt, VTMouseState state, char* output, s
     bool some_button_is_pressed = memcmp(state.button, (bool[]) {0,0,0,0,0}, 5) != 0;
     bool location_changed = (vt->last_mouse_state.row != state.row) || (vt->last_mouse_state.column != state.column);
 
+    if (state.button[VTM_SCROLL_DOWN] || state.button[VTM_SCROLL_UP]) {
+        buttons_changed = true;
+    }
+
     bool report = (vt->mouse_tracking >= VTM_CLICKS && buttons_changed)
                || (vt->mouse_tracking >= VTM_DRAG && location_changed && some_button_is_pressed)
                || (vt->mouse_tracking == VTM_ALL && (buttons_changed || location_changed));
