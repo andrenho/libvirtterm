@@ -77,17 +77,10 @@ VTPTYStatus vtpty_keypress(VTPTY* p, uint16_t key, bool shift, bool ctrl)
     return write_to_vt(p, buf, n);
 }
 
-VTPTYStatus vtpty_mouse_move(VTPTY* p, INT row, INT column)
+VTPTYStatus vtpty_update_mouse_state(VTPTY* p, VTMouseState state)
 {
     char buf[24];
-    int n = vt_translate_mouse_move(p->vt, row, column, buf, sizeof buf);
-    return write_to_vt(p, buf, n);
-}
-
-VTPTYStatus vtpty_mouse_click(VTPTY* p, INT row, INT column, VTMouseButton button, bool down, VTMouseModifier mod)
-{
-    char buf[24];
-    int n = vt_translate_mouse_click(p->vt, row, column, button, down, mod, buf, sizeof buf);
+    int n = vt_translate_updated_mouse_state(p->vt, state, buf, sizeof buf);
     return write_to_vt(p, buf, n);
 }
 

@@ -43,10 +43,7 @@ typedef struct VT {
     char*              last_text_received;
     VTMouseTracking    mouse_tracking;
     bool               sgr_mouse_mode;
-    VTMouseButton      last_mouse_button;
-    VTMouseModifier    last_mouse_mod;
-    INT                last_mouse_row;
-    INT                last_mouse_column;
+    VTMouseState       last_mouse_state;
 
     // escape sequence parsing
     char       esc_buffer[32];
@@ -86,10 +83,7 @@ VT* vt_new(INT rows, INT columns, VTConfig const* config)
     vt->last_text_received = NULL;
     vt->mouse_tracking = VTM_NO;
     vt->sgr_mouse_mode = false;
-    vt->last_mouse_button = VTM_RELEASE;
-    vt->last_mouse_mod = 0;
-    vt->last_mouse_row = 0;
-    vt->last_mouse_column = 0;
+    vt->last_mouse_state = (VTMouseState) { .column = -1, .row = -1, .button = {0,0,0,0,0}, .mod = 0 };
     memset(vt->esc_buffer, 0, sizeof vt->esc_buffer);
 
     vt->matrix = malloc(rows * columns * sizeof(VTCell));
@@ -126,10 +120,7 @@ void vt_reset(VT* vt)
     vt->last_text_received = NULL;
     vt->mouse_tracking = VTM_NO;
     vt->sgr_mouse_mode = false;
-    vt->last_mouse_button = VTM_RELEASE;
-    vt->last_mouse_mod = 0;
-    vt->last_mouse_row = 0;
-    vt->last_mouse_column = 0;
+    vt->last_mouse_state = (VTMouseState) { .column = -1, .row = -1, .button = {0,0,0,0,0}, .mod = 0 };
     for (int i = 0; i < vt->rows * vt->columns; ++i)
         vt->matrix[i] = (VTCell) { .ch = ' ', .attrib = DEFAULT_ATTR };
     memcpy(vt->matrix_copy, vt->matrix, vt->columns * vt->rows * sizeof(VTCell));
@@ -1088,48 +1079,54 @@ int vt_translate_key(VT* vt, uint16_t key, bool shift, bool ctrl, char* output, 
 
 #pragma region Mouse Translation
 
-
-static int generate_mouse_sequence(VT* vt, INT row, INT column, VTMouseButton button, bool down, VTMouseModifier mod, bool is_move, char* output, size_t max_sz)
+int vt_translate_updated_mouse_state(VT* vt, VTMouseState state, char* output, size_t max_sz)
 {
-    if (vt->sgr_mouse_mode) {
-        // TODO - what about dragging?
-        int m = button + mod + (is_move ? 32 : 0);
-        return snprintf(output, max_sz, "\e<%d;%d;%d%c", m, column + 1, row + 1, down ? 'M' : 'm');
-    } else {
-        if (down)
-            button = VTM_RELEASE;
-        if (is_move)
-            button = vt->last_mouse_button;
-        int m = button + mod + (is_move ? 32 : 0);
-        if (row >= 223 || column >= 223)
-            return 0;
-        return snprintf(output, max_sz, "\e[M%c%c%c", m + 32, column + 33, row + 33);
+    if (state.row < 0 || state.row > vt->rows || state.column < 0 || state.column > vt->columns)
+        return 0;
+
+    static INT BUTTONS[] = { 0, 1, 2, 64, 65 };
+
+    bool buttons_changed = (memcmp(vt->last_mouse_state.button, state.button, sizeof state.button) != 0)
+                        || vt->last_mouse_state.mod != state.mod;
+    bool some_button_is_pressed = memcmp(state.button, (bool[]) {0,0,0,0,0}, 5) != 0;
+    bool location_changed = (vt->last_mouse_state.row != state.row) || (vt->last_mouse_state.column != state.column);
+
+    bool report = (vt->mouse_tracking >= VTM_CLICKS && buttons_changed)
+               || (vt->mouse_tracking >= VTM_DRAG && location_changed && some_button_is_pressed)
+               || (vt->mouse_tracking == VTM_ALL && (buttons_changed || location_changed));
+    if (!report) {
+        vt->last_mouse_state = state;
+        return 0;
     }
-}
 
-int vt_translate_mouse_move(VT* vt, INT row, INT column, char* output, size_t max_sz)
-{
-    bool same_pos = false;
-    if (row == vt->last_mouse_row && column == vt->last_mouse_column)
-        same_pos = true;
+    INT button = 0;
+    bool release = false;
+    for (VTMouseButton b = VTM_LEFT; b < VTM_MAX; ++b) {
+        if (state.button[b] && !vt->last_mouse_state.button[b]) {
+            button = BUTTONS[b];
+            break;
+        } else if (!state.button[b] && vt->last_mouse_state.button[b]) {
+            button = BUTTONS[b];
+            release = true;
+            break;
+        }
+    }
 
-    vt->last_mouse_row = row;
-    vt->last_mouse_column = column;
+    vt->last_mouse_state = state;
 
-    if (!same_pos && (vt->mouse_tracking == VTM_ALL || (vt->mouse_tracking == VTM_DRAG && vt->last_mouse_button != VTM_RELEASE)))
-        return generate_mouse_sequence(vt, row, column, vt->last_mouse_button, false, vt->last_mouse_mod, true, output, max_sz);
+    if (vt->sgr_mouse_mode) {
+        INT m = button + state.mod + (!buttons_changed ? 32 : 0);
+        return snprintf(output, max_sz, "\e<%d;%d;%d%c", m, state.column + 1, state.row + 1, release ? 'm' : 'M');
+    } else if (state.row < 223 && state.column < 223) {
+        if (release)
+            button = 3;  // release
+        INT m = button + state.mod + (!buttons_changed ? 32 : 0);
+        return snprintf(output, max_sz, "\e[M%c%c%c", m + 32, state.column + 33, state.row + 33);
+    }
+
+    // TODO - if scroll, send release too
 
     return 0;
-}
-
-int vt_translate_mouse_click(VT* vt, INT row, INT column, VTMouseButton button, bool down, VTMouseModifier mod, char* output, size_t max_sz)
-{
-    if (vt->mouse_tracking == VTM_NO)
-        return 0;
-    int r = generate_mouse_sequence(vt, row, column, button, down, mod, false, output, max_sz);
-    vt->last_mouse_button = down ? button : VTM_RELEASE;
-    vt->last_mouse_mod = mod;
-    return r;
 }
 
 #pragma endregion

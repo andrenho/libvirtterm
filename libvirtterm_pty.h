@@ -16,8 +16,7 @@ VTPTYStatus vtpty_process(VTPTY* p);
 
 void        vtpty_resize(VTPTY* p, int rows, int columns);
 
-VTPTYStatus vtpty_mouse_move(VTPTY* p, INT row, INT column);
-VTPTYStatus vtpty_mouse_click(VTPTY* p, INT row, INT column, VTMouseButton button, bool down, VTMouseModifier mod);
+VTPTYStatus vtpty_update_mouse_state(VTPTY* p, VTMouseState state);
 
 const char* vtpty_name(VTPTY* p);
 
