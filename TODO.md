@@ -37,9 +37,9 @@ TODO:
   - [x] Resize support (basic)
   - [x] Application not exiting on exit
       - [x] separate library for PTY
-  - [ ] Mouse support
-      - [ ] ncurses
-      - [ ] Others (vim, etc)
+  - [x] Mouse support
+      - [x] ncurses
+      - [x] Others (vim, etc)
   - [ ] Other functions
       flash_screen=\E[?5h$<100/>\E[?5l,
   - [ ] Blinking
