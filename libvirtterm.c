@@ -63,6 +63,7 @@ typedef struct VT {
 } VT;
 
 static void vt_add_char(VT* vt, CHAR c);
+static void vt_add_event(VT* vt, VTEvent* event);
 static void vt_free_event_queue(VT*);
 
 
@@ -196,11 +197,25 @@ static void vt_timed_operations(VT* vt)
     if (diff_blink > vt->config.blink_ms) {
         vt->blink_on = !vt->blink_on;
         vt->last_blink = now;
+        for (size_t i = 0; i < vt->rows * vt->columns; ++i) {
+            if (vt->matrix[i].attrib.blink) {
+                INT row = i / vt->columns;
+                INT column = i % vt->columns;
+                vt_add_event(vt, &(VTEvent) {
+                    .type = VT_EVENT_CELLS_UPDATED,
+                    .cells = { .column_start = column, .column_end = column, .row_start = row, .row_end = row }
+                });
+            }
+        }
     }
 
     if (diff_cursor_blink > vt->config.blink_ms) {
         vt->cursor_blink_on = !vt->cursor_blink_on;
         vt->last_cursor_blink = now;
+        vt_add_event(vt, &(VTEvent) {
+            .type = VT_EVENT_CELLS_UPDATED,
+            .cells = { .column_start = vt->cursor.column, .column_end = vt->cursor.column, .row_start = vt->cursor.row, .row_end = vt->cursor.row }
+        });
     }
 }
 
