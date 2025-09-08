@@ -9,9 +9,16 @@ The application should provide the graphical functionalities to transform the 2D
 A small example of an application is included. Here are some screenshots:
 
 ![man](screenshots/man.png)
+*Man page*
+
 ![mc](screenshots/mc.png)
+*Midnight commander*
+
 ![vim](screenshots/vim.png)
+*Code edition with vim*
+
 ![cmatrix](screenshots/cmatrix.png)
+*CMatrix screen saver*
 
 ---
 
