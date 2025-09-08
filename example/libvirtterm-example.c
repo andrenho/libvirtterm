@@ -183,6 +183,7 @@ static SDL_AppResult vtpty_do(VTPTYStatus status)
 SDL_AppResult mouse_event(SDL_Event* event)
 {
     VTMouseState mstate;
+    size_t times = 1;
 
     float x, y;
     SDL_MouseButtonFlags bflags = SDL_GetMouseState(&x, &y);
@@ -193,8 +194,11 @@ SDL_AppResult mouse_event(SDL_Event* event)
     mstate.button[VTM_LEFT] = (bflags & SDL_BUTTON_LMASK) ? true : false;
     mstate.button[VTM_MIDDLE] = (bflags & SDL_BUTTON_MMASK) ? true : false;
     mstate.button[VTM_RIGHT] = (bflags & SDL_BUTTON_RMASK) ? true : false;
-    mstate.button[VTM_SCROLL_DOWN] = false;
-    mstate.button[VTM_SCROLL_UP] = false;
+    mstate.button[VTM_SCROLL_DOWN] = event->type == SDL_EVENT_MOUSE_WHEEL && event->wheel.integer_y < 0;
+    mstate.button[VTM_SCROLL_UP] = event->type == SDL_EVENT_MOUSE_WHEEL && event->wheel.integer_y > 0;
+
+    if (event->type == SDL_EVENT_MOUSE_WHEEL)
+        times = abs(event->wheel.integer_y);
 
     SDL_Keymod kmod = SDL_GetModState();
     mstate.mod = 0;
@@ -202,7 +206,12 @@ SDL_AppResult mouse_event(SDL_Event* event)
     if (kmod & SDL_KMOD_ALT) mstate.mod |= VTM_ALT;
     if (kmod & SDL_KMOD_CTRL) mstate.mod |= VTM_CTRL;
 
-    return vtpty_do(vtpty_update_mouse_state(vtpty, mstate));
+    for (size_t i = 0; i < times; ++i) {
+        SDL_AppResult r = vtpty_do(vtpty_update_mouse_state(vtpty, mstate));
+        if (r != SDL_APP_CONTINUE)
+            return r;
+    }
+    return SDL_APP_CONTINUE;
 }
 
 

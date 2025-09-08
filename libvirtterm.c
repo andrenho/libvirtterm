@@ -1112,14 +1112,24 @@ int vt_translate_updated_mouse_state(VT* vt, VTMouseState state, char* output, s
         }
     }
 
+    if ((!state.button[VTM_SCROLL_UP] && vt->last_mouse_state.button[VTM_SCROLL_UP]) || (!state.button[VTM_SCROLL_DOWN] && vt->last_mouse_state.button[VTM_SCROLL_DOWN])) {
+        vt->last_mouse_state = state;
+        return 0;
+    }
+
     vt->last_mouse_state = state;
 
     if (vt->sgr_mouse_mode) {
         INT m = button + state.mod + (!buttons_changed ? 32 : 0);
         return snprintf(output, max_sz, "\e<%d;%d;%d%c", m, state.column + 1, state.row + 1, release ? 'm' : 'M');
     } else if (state.row < 223 && state.column < 223) {
-        if (release)
-            button = 3;  // release
+        button = 3;
+        for (VTMouseButton b = VTM_LEFT; b < VTM_MAX; ++b) {
+            if (state.button[b]) {
+                button = BUTTONS[b];
+                break;
+            }
+        }
         INT m = button + state.mod + (!buttons_changed ? 32 : 0);
         return snprintf(output, max_sz, "\e[M%c%c%c", m + 32, state.column + 33, state.row + 33);
     }
