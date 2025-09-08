@@ -18,7 +18,7 @@
     for (INT row = 0; row < vt->rows; ++row) {
         printf("|");
         for (INT column = 0; column < vt->columns; ++column)
-            printf("%c", vt_char(vt, row, column).ch);
+            printf("%c", vt_cell(vt, row, column).ch);
         printf("|\n");
     }
     printf("+--------------------+\n");

@@ -206,7 +206,7 @@ void vt_reset(VT* vt);
 void vt_resize(VT* vt, INT rows, INT columns);
 
 // information
-VTCell vt_char(VT* vt, INT row, INT column);
+VTCell vt_cell(VT* vt, INT row, INT column);
 int    vt_translate_key(VT* vt, uint16_t key, bool shift, bool ctrl, char* output, size_t max_sz);
 int    vt_translate_updated_mouse_state(VT* vt, VTMouseState state, char* output, size_t max_sz);
 

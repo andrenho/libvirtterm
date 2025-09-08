@@ -27,6 +27,7 @@ static VT*              vt;
 static VTPTY*           vtpty;
 static SDL_Texture*     font;
 static VTCell           cells[500][500];
+static INT              previous_cursor_row, previous_cursor_column;
 
 #define MY_DEFAULT_ATTR ((VTAttrib) { \
     .bold = false, .dim = false, .underline = false, .blink = false, .reverse = false, .invisible = false, .italic = false, \
@@ -303,7 +304,14 @@ SDL_AppResult SDL_AppIterate(void *appstate)
         } else if (e.type == VT_EVENT_CELLS_UPDATED) {
             for (INT row = e.cells.row_start; row <= e.cells.row_end; ++row)
                 for (INT column = e.cells.column_start; column <= e.cells.column_end; ++column)
-                    cells[row][column] = vt_char(vt, row, column);
+                    cells[row][column] = vt_cell(vt, row, column);
+        } else if (e.type == VT_EVENT_CURSOR_MOVED) {
+            cells[previous_cursor_row][previous_cursor_column] = vt_cell(vt, previous_cursor_row, previous_cursor_column);
+            INT cursor_row = vt_cursor(vt).row;
+            INT cursor_column = vt_cursor(vt).column;
+            cells[cursor_row][cursor_column] = vt_cell(vt, cursor_row, cursor_column);
+            previous_cursor_row = cursor_row;
+            previous_cursor_column = cursor_column;
         }
     }
 

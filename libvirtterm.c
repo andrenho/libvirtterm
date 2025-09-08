@@ -578,14 +578,13 @@ static void escape_seq_clear_cells(VT* vt, char mode, int parameter)
         switch (parameter) {
             case 0:  // cursor to end of screen
                 vt_memset_ch(vt, vt->cursor.row, vt->rows - 1, vt->cursor.column, vt->columns - 1, ' ');
-            break;
+                break;
             case 1:  // start of screen to cursor
                 vt_memset_ch(vt, 0, vt->cursor.row, 0, vt->cursor.column, ' ');
-            break;
+                break;
             case 2:  // all screen
                 vt_memset_ch(vt, 0, vt->rows - 1, 0, vt->columns - 1, ' ');
-            // TODO - send event
-            break;
+                break;
             case 3:
                 break;
             default:
@@ -596,16 +595,18 @@ static void escape_seq_clear_cells(VT* vt, char mode, int parameter)
         switch (parameter) {
             case 0:  // cursor to end of line
                 vt_memset_ch(vt, vt->cursor.row, vt->cursor.row, vt->cursor.column, vt->columns - 1, ' ');
-            break;
+                break;
             case 1:  // start of line to cursor
                 vt_memset_ch(vt, vt->cursor.row, vt->cursor.row, 0, vt->cursor.column, ' ');
-            break;
+                break;
             case 2:  // all line
                 vt_memset_ch(vt, vt->cursor.row, vt->cursor.row, 0, vt->columns - 1, ' ');
-            break;
+                break;
             default:
         }
     }
+
+    vt_add_event_update_whole_screen(vt);  // TODO - make it more efficient
 }
 
 static void xterm_escape_seq(VT* vt, char mode, INT arg)
@@ -942,7 +943,7 @@ void vt_write(VT* vt, const char* str, size_t str_sz)
 
 #pragma region Information
 
-VTCell vt_char(VT* vt, INT row, INT column)
+VTCell vt_cell(VT* vt, INT row, INT column)
 {
     if (row * vt->columns + column >= vt->rows * vt->columns && vt->config.debug >= VT_DEBUG_ERRORS_ONLY) {
         fprintf(stderr, "vt_char: trying read data outside of screen bounds");

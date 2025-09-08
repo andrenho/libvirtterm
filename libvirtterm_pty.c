@@ -80,8 +80,6 @@ VTPTYStatus vtpty_update_mouse_state(VTPTY* p, VTMouseState state)
 {
     char buf[24];
     int n = vt_translate_updated_mouse_state(p->vt, state, buf, sizeof buf);
-    if (n)
-        printf("\\e%s\n", &buf[1]);
     return write_to_vt(p, buf, n);
 }
 
